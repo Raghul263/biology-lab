@@ -3,11 +3,12 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 const LabRoom = () => {
-  // We'll use simple colors for now based on the illustration
+  // Texture for the chalkboard diagram provided by the user
+  const chalkboardTexture = useTexture('/biology_chalkboard.jpg');
+  
   const wallColor = "#fcd5b5"; // Peach
   const floorColor = "#a0522d"; // Terracotta
   const woodColor = "#3e2723"; // Dark Wood
-  const greenBoardColor = "#2d5e2e"; // Green Chalkboard
   const blueChairColor = "#1565c0"; // Office Chair Blue
 
   return (
@@ -35,7 +36,7 @@ const LabRoom = () => {
             <circleGeometry args={[0.5, 32]} />
             <meshBasicMaterial color="#ffffff" />
           </mesh>
-          <pointLight position={[0, -0.5, 0]} intensity={1.5} distance={15} />
+          <pointLight position={[0, -0.2, 0]} intensity={1.5} distance={15} />
         </group>
       ))}
 
@@ -57,17 +58,17 @@ const LabRoom = () => {
       </mesh>
 
       {/* --- Back Wall Elements --- */}
-      {/* Large Green Chalkboard */}
+      {/* Large Chalkboard with Diagram Texture */}
       <group position={[0, 2.3, -6.95]}>
         {/* Board Frame */}
         <mesh castShadow>
           <boxGeometry args={[4.5, 2.5, 0.1]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
-        {/* Surface */}
+        {/* Surface with Diagram Texture */}
         <mesh position={[0, 0, 0.051]}>
           <planeGeometry args={[4.2, 2.2]} />
-          <meshStandardMaterial color={greenBoardColor} roughness={0.8} />
+          <meshStandardMaterial map={chalkboardTexture} roughness={0.8} />
         </mesh>
         {/* Chalk Tray */}
         <mesh position={[0, -1.3, 0.1]} castShadow>
@@ -104,7 +105,7 @@ const LabRoom = () => {
       </group>
 
       {/* --- Furniture: Office Desk (Left) --- */}
-      <group position={[-3.5, 0, -3]}>
+      <group position={[-6.5, 0, -3]}>
         {/* Desk Body */}
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.8, 0.8, 1.0]} />
@@ -140,16 +141,16 @@ const LabRoom = () => {
         </group>
       </group>
 
-      {/* --- Furniture: Lab Bench (Right) --- */}
-      <group position={[3.5, 0, -3]}>
+      {/* --- Furniture: Centered Lab Bench (Main) --- */}
+      <group position={[0, 0, -2.5]}>
         {/* Cabinet Body */}
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
-          <boxGeometry args={[3.5, 0.8, 1.4]} />
+          <boxGeometry args={[4.0, 0.8, 1.6]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
         {/* Lab Top */}
         <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
-          <boxGeometry args={[3.8, 0.1, 1.6]} />
+          <boxGeometry args={[4.4, 0.1, 1.8]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
       </group>
