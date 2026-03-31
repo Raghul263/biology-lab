@@ -19,8 +19,8 @@ const OnionPeel = ({ rotation, phiStart, phiLength, scale = 1 }) => {
     return pts;
   }, [scale]);
 
-  const skinColor = "#cd853f"; // Peru / Golden Brown
-  const skinRoughness = 0.85;
+  const skinColor = "#880e4f"; // Deep Red / Purple (Red Onion)
+  const skinRoughness = 0.65;
 
   return (
     <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
