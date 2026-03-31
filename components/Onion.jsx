@@ -8,45 +8,45 @@ const OnionPeel = ({ rotation, phiStart, phiLength, scale = 1 }) => {
   const points = React.useMemo(() => {
     const pts = [];
     const s = 0.5 * scale;
-    // Teardrop shape for onion bulb
-    pts.push(new THREE.Vector2(0, -0.15 * s)); // Base
-    pts.push(new THREE.Vector2(0.12 * s, -0.14 * s));
-    pts.push(new THREE.Vector2(0.22 * s, -0.10 * s));
-    pts.push(new THREE.Vector2(0.28 * s, 0.05 * s));
-    pts.push(new THREE.Vector2(0.22 * s, 0.25 * s));
-    pts.push(new THREE.Vector2(0.10 * s, 0.40 * s));
-    pts.push(new THREE.Vector2(0.02 * s, 0.50 * s)); // Neck
+    // ROUNDER/BULBOUS Shape like red onion photo
+    pts.push(new THREE.Vector2(0, -0.1 * s)); // Flattened base
+    pts.push(new THREE.Vector2(0.15 * s, -0.08 * s));
+    pts.push(new THREE.Vector2(0.30 * s, 0.1 * s)); // WIDER BULB
+    pts.push(new THREE.Vector2(0.28 * s, 0.3 * s));
+    pts.push(new THREE.Vector2(0.15 * s, 0.45 * s));
+    pts.push(new THREE.Vector2(0.04 * s, 0.55 * s)); // TIGHTER NECK
+    pts.push(new THREE.Vector2(0.015 * s, 0.6 * s)); // Neck tip
     return pts;
   }, [scale]);
 
-  const skinColor = "#880e4f"; // Deep Red / Purple (Red Onion)
-  const skinRoughness = 0.65;
+  const skinColor = "#880e4f"; // Deep Red / Purple
+  const skinRoughness = 0.6;
 
   return (
     <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
       <mesh castShadow receiveShadow>
-        <latheGeometry args={[points, 24, phiStart, phiLength]} />
+        <latheGeometry args={[points, 32, phiStart, phiLength]} />
         <meshStandardMaterial 
           color={skinColor} 
           roughness={skinRoughness} 
           metalness={0.0} 
-          emissive="#5d4037" 
-          emissiveIntensity={0.05} 
+          emissive="#4a148c" 
+          emissiveIntensity={0.08} 
         />
       </mesh>
       
       {/* Texture Lines (Dry Skin Veins) */}
-      {[0.1, 0.2, 0.3].map((phiOffset, i) => (
+      {[0.08, 0.18, 0.28].map((phiOffset, i) => (
         <mesh key={i} rotation={[0, phiOffset, 0]}>
-          <latheGeometry args={[points, 24, 0, 0.005]} />
-          <meshBasicMaterial color="#3e2723" opacity={0.3} transparent /> 
+          <latheGeometry args={[points, 32, 0, 0.004]} />
+          <meshBasicMaterial color="#311b92" opacity={0.25} transparent /> 
         </mesh>
       ))}
 
-      {/* Base Root Disk (Anatomical) */}
-      <mesh position={[0, -0.075 * scale, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.06 * scale, 24]} />
-        <meshStandardMaterial color="#d7ccc8" roughness={1} />
+      {/* Base Root Disk */}
+      <mesh position={[0, -0.05 * scale, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.08 * scale, 32]} />
+        <meshStandardMaterial color="#8d6e63" roughness={1} />
       </mesh>
     </group>
   );
@@ -55,23 +55,23 @@ const OnionPeel = ({ rotation, phiStart, phiLength, scale = 1 }) => {
 const RootTendril = ({ index }) => {
   const curve = React.useMemo(() => {
     const points = [];
-    // Length varies for organic look
-    const length = 0.18 + (Math.sin(index * 0.5) * 0.08); 
+    // SHORTER SPREAD-OUT roots for red onion
+    const length = 0.05 + (Math.sin(index * 0.8) * 0.04); 
     
-    // Positioned EXACTLY at the bulb base center
-    const angle = (index / 160) * Math.PI * 2;
-    const radius = Math.random() * 0.04; // Keep it tight to the base
+    // Spread horizontal
+    const angle = (index / 120) * Math.PI * 2;
+    const radius = 0.01 + Math.random() * 0.06;
     
-    // Start point (Attached to bulb base)
-    points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
+    // Start at bulb base
+    points.push(new THREE.Vector3(Math.cos(angle) * (radius * 0.2), 0, Math.sin(angle) * (radius * 0.2)));
     
-    // Hanging down with slight vertical variations
-    for (let j = 1; j <= 5; j++) {
-      const p = j / 5;
+    // Spread out horizontally (frizz)
+    for (let j = 1; j <= 4; j++) {
+      const p = j / 4;
       points.push(new THREE.Vector3(
-        (Math.cos(angle) * radius) + (Math.sin(index + j) * 0.02 * p),
-        -length * p,
-        (Math.sin(angle) * radius) + (Math.cos(index + j) * 0.02 * p)
+        (Math.cos(angle) * radius * p) + (Math.random() - 0.5) * 0.03,
+        -length * p * (1 - p * 0.2), // Tapered down
+        (Math.sin(angle) * radius * p) + (Math.random() - 0.5) * 0.03
       ));
     }
     
@@ -80,12 +80,12 @@ const RootTendril = ({ index }) => {
 
   return (
     <mesh castShadow>
-      <tubeGeometry args={[curve, 8, 0.0012, 6, false]} />
+      <tubeGeometry args={[curve, 6, 0.001, 4, false]} />
       <meshStandardMaterial 
-        color="#fdf5ed" 
+        color="#a1887f" // Brownish-Beige for Red Onion Roots
         roughness={1.0} 
         transparent 
-        opacity={0.85} 
+        opacity={0.9} 
       />
     </mesh>
   );
@@ -94,21 +94,20 @@ const RootTendril = ({ index }) => {
 const SproutShoot = ({ index }) => {
   const curve = React.useMemo(() => {
     const points = [];
-    const height = 0.3 + Math.random() * 0.2;
-    const angle = (index / 6) * Math.PI * 2;
-    const radius = 0.005 + Math.random() * 0.01;
+    const height = 0.08 + Math.random() * 0.08; // VERY SHORT TUFT
+    const angle = (index / 12) * Math.PI * 2;
+    const radius = 0.002 + Math.random() * 0.008;
     
-    // Base at onion neck
+    // Base at neck
     points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
     
-    // Tapered and curved path
-    for (let j = 1; j <= 4; j++) {
-      const p = j / 4;
-      const offset = (Math.cos(index * 2 + j) * 0.1 * p);
+    // Tiny vertical curve
+    for (let j = 1; j <= 3; j++) {
+      const p = j / 3;
       points.push(new THREE.Vector3(
-        (Math.cos(angle) * radius) + offset,
+        (Math.cos(angle) * radius) + (Math.random() - 0.5) * 0.01,
         height * p,
-        (Math.sin(angle) * radius) + (Math.sin(index * 2 + j) * 0.1 * p)
+        (Math.sin(angle) * radius) + (Math.random() - 0.5) * 0.01
       ));
     }
     return new THREE.CatmullRomCurve3(points);
@@ -116,8 +115,8 @@ const SproutShoot = ({ index }) => {
 
   return (
     <mesh castShadow>
-      <tubeGeometry args={[curve, 12, 0.008 * (1 - index/12), 8, false]} />
-      <meshStandardMaterial color="#2e7d32" roughness={0.6} />
+      <tubeGeometry args={[curve, 6, 0.004 * (1 - index/16), 6, false]} />
+      <meshStandardMaterial color="#388e3c" roughness={0.7} />
     </mesh>
   );
 };
@@ -161,13 +160,13 @@ const Onion = ({ position = [0, 0.93, 0] }) => {
       targetPos.current.set(...position);
       targetRot.current.set(0, 0, 0);
     } else if ((currentStep === STEPS.GROWTH_TILE && onionPlacedOnTile) || currentStep === STEPS.CUT_INITIAL) {
-      targetPos.current.set(tilePos[0], tilePos[1] + 0.1, tilePos[2]);
-      targetRot.current.set(0, 0, Math.PI / 2); // Lay horizontal
+      targetPos.current.set(tilePos[0], tilePos[1] + 0.08, tilePos[2]);
+      targetRot.current.set(0, 0, Math.PI / 2);
     } else if (currentStep === STEPS.GROWTH_BEAKER && onionInBeaker) {
-      targetPos.current.set(beakerPos[0], beakerPos[1] + 0.12, beakerPos[2]);
-      targetRot.current.set(0, 0, 0); // Vertical in beaker
+      targetPos.current.set(beakerPos[0], beakerPos[1] + 0.14, beakerPos[2]);
+      targetRot.current.set(0, 0, 0);
     } else if (currentStep === STEPS.CUT_FRESH) {
-      targetPos.current.set(tilePos[0], tilePos[1] + 0.1, tilePos[2]);
+      targetPos.current.set(tilePos[0], tilePos[1] + 0.08, tilePos[2]);
       targetRot.current.set(0, 0, Math.PI / 2);
     }
   }, [currentStep, onionPlacedOnTile, onionInBeaker, position]);
@@ -225,37 +224,37 @@ const Onion = ({ position = [0, 0.93, 0] }) => {
 
   return (
     <group ref={meshRef} onPointerDown={handlePointerDown}>
-      <group position={[0, 0.1, 0]}>
-        {/* Onion Bulb Body */}
-        {[...Array(8)].map((_, i) => (
+      <group position={[0, 0.05, 0]}>
+        {/* Rounded Bulb Body */}
+        {[...Array(12)].map((_, i) => (
           <OnionPeel 
             key={i} 
-            rotation={(i * Math.PI) / 4} 
+            rotation={(i * Math.PI) / 6} 
             phiStart={0} 
-            phiLength={Math.PI / 4 + 0.02} 
+            phiLength={Math.PI / 6 + 0.02} 
             scale={1 - (i % 2) * 0.002} 
           />
         ))}
 
-        {/* Improved Shoot Sprouting */}
-        <group position={[0, 0.25, 0]}>
-          {[...Array(6)].map((_, i) => (
+        {/* Compact Tuft Sprout */}
+        <group position={[0, 0.3, 0]}>
+          {[...Array(16)].map((_, i) => (
             <SproutShoot key={`sprout-${i}`} index={i} />
           ))}
         </group>
  
-        {/* Roots - Zero Gap Mass */}
-        <group position={[0, -0.075, 0]} scale={[1, rootScale, 1]}>
-          {[...Array(160)].map((_, i) => (
+        {/* Short Spread-Out Roots */}
+        <group position={[0, -0.05, 0]} scale={[1, rootScale, 1]}>
+          {[...Array(120)].map((_, i) => (
             <RootTendril key={`root-${i}`} index={i} />
           ))}
         </group>
       </group>
 
-      {/* Interactivity Highlights */}
+      {/* Highlights */}
       {((currentStep === STEPS.GROWTH_TILE && !onionPlacedOnTile) || (currentStep === STEPS.GROWTH_BEAKER && !onionInBeaker)) && !isHeld && (
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.18, 0.005, 16, 32]} />
+          <torusGeometry args={[0.2, 0.004, 16, 32]} />
           <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
         </mesh>
       )}
@@ -263,11 +262,11 @@ const Onion = ({ position = [0, 0.93, 0] }) => {
       {(currentStep === STEPS.CUT_INITIAL || currentStep === STEPS.CUT_FRESH) && (
         <group position={[0, 0, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.08, 0.004, 16, 32]} />
+            <torusGeometry args={[0.1, 0.004, 16, 32]} />
             <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
           </mesh>
           <mesh onClick={handleCut} onPointerOver={() => (document.body.style.cursor = heldTool === 'scalpel' ? 'copy' : 'auto')} onPointerOut={() => (document.body.style.cursor = 'auto')}>
-            <cylinderGeometry args={[0.1, 0.1, 0.1, 8]} />
+            <cylinderGeometry args={[0.12, 0.12, 0.1, 8]} />
             <meshBasicMaterial transparent opacity={0} />
           </mesh>
         </group>
