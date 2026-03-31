@@ -145,11 +145,12 @@ function Scene() {
         enabled={!microscopeZoomed}
         enableRotate={!heldTool}
         makeDefault 
-        minPolarAngle={Math.PI / 6} 
-        maxPolarAngle={Math.PI / 2.5}
+        minPolarAngle={Math.PI / 4} 
+        maxPolarAngle={Math.PI / 2.2}
         target={[0, 1.2, -2.5]}
-        minDistance={2}
-        maxDistance={9}
+        minDistance={1.5}
+        maxDistance={5.5}
+        enablePan={false}
       />
     </>
   );

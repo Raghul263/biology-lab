@@ -44,17 +44,17 @@ const LabRoom = () => {
       {/* Back Wall */}
       <mesh position={[0, 2, -7]}>
         <planeGeometry args={[20, 10]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
       {/* Left Wall */}
       <mesh position={[-10, 2, 0]} rotation={[0, Math.PI / 2, 0]}>
         <planeGeometry args={[20, 10]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
       {/* Right Wall */}
       <mesh position={[10, 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <planeGeometry args={[20, 10]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
 
       {/* --- Back Wall Elements --- */}
