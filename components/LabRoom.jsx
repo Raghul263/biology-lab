@@ -15,22 +15,22 @@ const LabRoom = () => {
     <group>
       {/* --- Environment: Floor & Ceiling --- */}
       <group>
-        {/* Floor Tiles */}
+        {/* Floor Tiles - 14x14 Symmetrical Floor */}
         <mesh receiveShadow position={[0, -0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[20, 20]} />
+          <planeGeometry args={[14, 14]} />
           <meshStandardMaterial color={floorColor} roughness={0.8} />
         </mesh>
-        <gridHelper args={[20, 20, '#555555', '#7f8c8d']} position={[0, -0.04, 0]} />
+        <gridHelper args={[14, 14, '#555555', '#7f8c8d']} position={[0, -0.04, 0]} />
       </group>
 
-      {/* Ceiling */}
+      {/* Ceiling - Symmetrical Ceiling */}
       <mesh receiveShadow position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[20, 20]} />
+        <planeGeometry args={[14, 14]} />
         <meshStandardMaterial color="#fffbe6" roughness={1} />
       </mesh>
 
-      {/* Ceiling Lights (Round Recessed) */}
-      {[[-3, 3.98, -2], [3, 3.98, -2], [-3, 3.98, 4], [3, 3.98, 4]].map((pos, i) => (
+      {/* Ceiling Lights (Round Recessed) - Symmetrical Layout */}
+      {[[-3, 3.98, -3], [3, 3.98, -3], [-3, 3.98, 3], [3, 3.98, 3]].map((pos, i) => (
         <group key={`light-${i}`} position={pos}>
           <mesh rotation={[Math.PI / 2, 0, 0]}>
             <circleGeometry args={[0.5, 32]} />
@@ -40,24 +40,24 @@ const LabRoom = () => {
         </group>
       ))}
 
-      {/* --- Walls --- */}
-      {/* Back Wall */}
+      {/* --- Walls: Absolute Symmetrical Boundaries --- */}
+      {/* Back Wall - Moved to -7 for equal spacing */}
       <mesh position={[0, 2, -7]}>
-        <planeGeometry args={[20, 10]} />
+        <planeGeometry args={[14, 10]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
-      {/* Left Wall */}
-      <mesh position={[-10, 2, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[20, 10]} />
+      {/* Left Wall - Moved to -7 for equal spacing */}
+      <mesh position={[-7, 2, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[14, 10]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
-      {/* Right Wall */}
-      <mesh position={[10, 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <planeGeometry args={[20, 10]} />
+      {/* Right Wall - Moved to 7 for equal spacing */}
+      <mesh position={[7, 2, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[14, 10]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* --- Back Wall Elements --- */}
+      {/* --- Back Wall Elements (Centered) --- */}
       {/* Large Chalkboard with Diagram Texture */}
       <group position={[0, 2.3, -6.95]}>
         {/* Board Frame */}
@@ -104,8 +104,8 @@ const LabRoom = () => {
         </mesh>
       </group>
 
-      {/* --- Furniture: Office Desk (Left) --- */}
-      <group position={[-6.5, 0, -3]}>
+      {/* --- Furniture: Office Desk (Moved to Back-Left Corner) --- */}
+      <group position={[-5, 0, -5]} rotation={[0, 0, 0]}>
         {/* Desk Body */}
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.8, 0.8, 1.0]} />
@@ -141,8 +141,8 @@ const LabRoom = () => {
         </group>
       </group>
 
-      {/* --- Furniture: Centered Lab Bench (Main) --- */}
-      <group position={[0, 0, -2.5]}>
+      {/* --- Furniture: Absolute Centered Lab Bench (Main) --- */}
+      <group position={[0, 0, 0]}>
         {/* Cabinet Body */}
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
           <boxGeometry args={[4.0, 0.8, 1.6]} />
@@ -155,38 +155,38 @@ const LabRoom = () => {
         </mesh>
       </group>
 
-      {/* --- Furniture: Large Bookshelf (Right Wall) --- */}
-      <group position={[8, 0, -2]} rotation={[0, -Math.PI / 2, 0]}>
+      {/* --- Furniture: Large Bookshelf (Moved to Back-Right Corner) --- */}
+      <group position={[5.5, 0, -5]} rotation={[0, 0, 0]}>
         {/* Back Panel */}
         <mesh position={[0, 1.5, -0.6]} castShadow receiveShadow>
-          <boxGeometry args={[4, 3, 0.1]} />
+          <boxGeometry args={[2.5, 3, 0.1]} />
           <meshStandardMaterial color="#8d6e63" />
         </mesh>
         {/* Side Panels */}
-        <mesh position={[-2, 1.5, 0]} castShadow receiveShadow>
+        <mesh position={[-1.25, 1.5, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.1, 3, 1.2]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
-        <mesh position={[2, 1.5, 0]} castShadow receiveShadow>
+        <mesh position={[1.25, 1.5, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.1, 3, 1.2]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
         {/* Shelves */}
         {[0, 0.8, 1.6, 2.4].map((y, i) => (
           <mesh key={`shelf-${i}`} position={[0, y, 0]} castShadow receiveShadow>
-            <boxGeometry args={[4, 0.05, 1.2]} />
+            <boxGeometry args={[2.5, 0.05, 1.2]} />
             <meshStandardMaterial color={woodColor} />
           </mesh>
         ))}
         {/* Bottom Cabinet Doors */}
         <mesh position={[0, 0.4, 0.55]} castShadow>
-          <boxGeometry args={[3.9, 0.75, 0.1]} />
+          <boxGeometry args={[2.4, 0.75, 0.1]} />
           <meshStandardMaterial color={woodColor} />
         </mesh>
       </group>
 
-      {/* --- Window & Blinds (Left Wall) --- */}
-      <group position={[-9.95, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
+      {/* --- Window & Blinds (Left Wall - Centered Z) --- */}
+      <group position={[-6.95, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         {/* Window Frame */}
         <mesh castShadow>
           <boxGeometry args={[6.5, 4.5, 0.1]} />
@@ -206,8 +206,8 @@ const LabRoom = () => {
         ))}
       </group>
 
-      {/* --- Potted Plant (Left Corner) --- */}
-      <group position={[-8, 0, 4]}>
+      {/* --- Potted Plant (Left Front-ish Corner for Balance) --- */}
+      <group position={[-5, 0, 5]}>
         {/* Pot */}
         <mesh position={[0, 0.3, 0]} castShadow>
           <cylinderGeometry args={[0.3, 0.2, 0.6, 16]} />
@@ -229,8 +229,8 @@ const LabRoom = () => {
         </group>
       </group>
 
-      {/* --- Wooden Door (Right Wall) --- */}
-      <group position={[9.95, 1.5, 5]} rotation={[0, -Math.PI / 2, 0]}>
+      {/* --- Wooden Door (Right Wall - Centered Z) --- */}
+      <group position={[6.95, 1.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         {/* Door Frame */}
         <mesh castShadow>
           <boxGeometry args={[2.2, 3.2, 0.2]} />

@@ -1,10 +1,10 @@
 import React from 'react';
-
+import * as THREE from 'three';
 import useStore, { STEPS } from '../lib/store';
 
 const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
   const { currentStep, heldTool, setHeldTool, setStates, rootTipsInWatchGlass, acidAdded, stainAdded } = useStore();
-  
+
   const isTarget = currentStep === STEPS.TREATMENT && !(acidAdded && stainAdded);
   const showHighlight = isTarget || (currentStep === STEPS.CUT_INITIAL && !rootTipsInWatchGlass);
 
@@ -22,8 +22,10 @@ const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
     }
   };
 
+  const liquidColor = stainAdded ? '#c62828' : '#b3d9f5';
+
   return (
-    <group 
+    <group
       position={position}
       onClick={handleInteraction}
       onPointerOver={() => {
@@ -31,87 +33,233 @@ const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
       }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Universal Step Highlight */}
+      {/* Pulsing highlight ring */}
       {showHighlight && (
-        <group position={[0, 0.05, 0]}>
+        <group position={[0, 0.01, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.16, 0.005, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.5} />
+            <torusGeometry args={[0.19, 0.006, 16, 64]} />
+            <meshBasicMaterial color="#00e5ff" transparent opacity={0.55} />
+          </mesh>
+          {/* Outer soft glow ring */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.22, 0.012, 16, 64]} />
+            <meshBasicMaterial color="#00e5ff" transparent opacity={0.15} />
           </mesh>
         </group>
       )}
 
-      {/* Main Glass Body - Ultra Clear Physical Material */}
-      <mesh receiveShadow castShadow position={[0, 0.155, 0]} rotation={[Math.PI, 0, 0]}>
-        <sphereGeometry args={[0.15, 64, 32, 0, Math.PI * 2, 0, Math.PI / 4]} />
-        <meshPhysicalMaterial 
+      {/* === SHADOW / BASE CONTACT SHADOW === */}
+      <mesh position={[0, -0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[0.155, 64]} />
+        <meshBasicMaterial color="#000000" transparent opacity={0.12} />
+      </mesh>
+
+      {/* === MAIN BOWL - lower concave hemisphere === */}
+      {/* Outer shell of the bowl */}
+      <mesh position={[0, 0, 0]} rotation={[Math.PI, 0, 0]} castShadow receiveShadow>
+        <sphereGeometry args={[0.155, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
+        <meshPhysicalMaterial
+          side={THREE.DoubleSide}
           transparent
-          opacity={1}
-          roughness={0.01}
-          transmission={0.99}
-          thickness={0.05}
+          opacity={0.18}
+          roughness={0.0}
+          metalness={0.0}
+          transmission={0.96}
+          thickness={0.45}
+          color="#d0eaf8"
+          ior={1.52}
+          clearcoat={1.0}
+          clearcoatRoughness={0.0}
+          specularIntensity={1.8}
+          reflectivity={1.0}
+          envMapIntensity={3.0}
+          attenuationDistance={0.8}
+          attenuationColor="#cfe8f5"
+        />
+      </mesh>
+
+      {/* Inner shell (back face for depth/refraction) */}
+      <mesh position={[0, -0.003, 0]} rotation={[Math.PI, 0, 0]}>
+        <sphereGeometry args={[0.148, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.36]} />
+        <meshPhysicalMaterial
+          side={THREE.BackSide}
+          transparent
+          opacity={0.12}
+          roughness={0.0}
+          transmission={0.98}
+          thickness={0.25}
+          color="#e8f4fb"
+          ior={1.52}
+          clearcoat={1.0}
+          clearcoatRoughness={0.0}
+          specularIntensity={1.2}
+          reflectivity={0.9}
+          envMapIntensity={2.5}
+        />
+      </mesh>
+
+      {/* === RIM - thick rounded glass rim === */}
+      {/* Main rim torus */}
+      <mesh position={[0, -0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.1385, 0.0155, 32, 128]} />
+        <meshPhysicalMaterial
+          transparent
+          opacity={0.55}
+          roughness={0.0}
+          metalness={0.0}
+          transmission={0.85}
+          thickness={0.06}
           color="#ffffff"
           ior={1.52}
           clearcoat={1.0}
-          clearcoatRoughness={0.02}
-          specularIntensity={1.5}
+          clearcoatRoughness={0.0}
+          specularIntensity={2.5}
           reflectivity={1.0}
-          envMapIntensity={2.0}
-          attenuationDistance={0.5}
+          envMapIntensity={3.5}
           attenuationColor="#e0f2f1"
         />
       </mesh>
 
-      {/* Realistic Glass Rim - Gives it the '3D Shape' and edge reflection */}
-      <mesh position={[0, 0.048, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.1065, 0.0035, 16, 128]} />
-        <meshStandardMaterial 
-          color="#ffffff" 
-          transparent 
-          opacity={0.7} 
-          emissive="#e0f2f1" 
-          emissiveIntensity={0.5} 
+      {/* Rim highlight (bright specular ring) */}
+      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.1385, 0.003, 16, 128]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          emissive="#e8f4fb"
+          emissiveIntensity={0.9}
+          transparent
+          opacity={0.85}
         />
       </mesh>
 
+      {/* Inner rim bevel (creates the thick-glass edge look) */}
+      <mesh position={[0, -0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.128, 0.006, 16, 128]} />
+        <meshPhysicalMaterial
+          transparent
+          opacity={0.35}
+          roughness={0.0}
+          transmission={0.9}
+          thickness={0.03}
+          color="#cce8f6"
+          ior={1.52}
+          clearcoat={1.0}
+          clearcoatRoughness={0.0}
+          specularIntensity={1.5}
+          envMapIntensity={2.0}
+        />
+      </mesh>
 
-      {/* Liquid inside - Color changes based on treatment */}
+      {/* === CAUSTIC LIGHT RING (refracted light on surface below) === */}
+      <mesh position={[0, -0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.11, 0.025, 8, 64]} />
+        <meshBasicMaterial
+          color="#d0efff"
+          transparent
+          opacity={0.12}
+        />
+      </mesh>
+
+      {/* === BASE DISC (flat glass bottom of bowl) === */}
+      <mesh position={[0, -0.009, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.125, 64]} />
+        <meshPhysicalMaterial
+          transparent
+          opacity={0.08}
+          roughness={0.0}
+          transmission={0.98}
+          thickness={0.02}
+          color="#e8f4fb"
+          ior={1.52}
+          clearcoat={1.0}
+          clearcoatRoughness={0.0}
+          envMapIntensity={1.5}
+        />
+      </mesh>
+
+      {/* === LIQUID === */}
       {(acidAdded || stainAdded) && (
-        <mesh position={[0, -0.01, 0]} receiveShadow>
-          <cylinderGeometry args={[0.12, 0.12, 0.01, 32]} />
-          <meshPhysicalMaterial 
-            color={stainAdded ? "#c62828" : "#e3f2fd"} 
-            transmission={0.7}
-            transparent 
-            opacity={0.8} 
-          />
-        </mesh>
-      )}
-
-      {/* Harvested Root Tips inside */}
-      {rootTipsInWatchGlass && (
-        <group position={[0, -0.01, 0]}>
-          {[...Array(5)].map((_, i) => (
-            <mesh 
-              key={i}
-              position={[(Math.random()-0.5)*0.08, 0, (Math.random()-0.5)*0.08]}
-              rotation={[Math.PI/2, Math.random()*Math.PI, 0]}
-            >
-              <cylinderGeometry args={[0.002, 0.002, 0.02, 8]} />
-              <meshStandardMaterial color={stainAdded ? "#ffcdd2" : "#fdf5e6"} />
-            </mesh>
-          ))}
+        <group position={[0, -0.003, 0]}>
+          {/* Main liquid body */}
+          <mesh receiveShadow>
+            <cylinderGeometry args={[0.118, 0.118, 0.014, 64]} />
+            <meshPhysicalMaterial
+              color={liquidColor}
+              transmission={stainAdded ? 0.45 : 0.72}
+              transparent
+              opacity={stainAdded ? 0.88 : 0.78}
+              roughness={0.0}
+              metalness={0.0}
+              ior={1.34}
+              thickness={0.1}
+              clearcoat={1.0}
+              clearcoatRoughness={0.0}
+              envMapIntensity={1.5}
+              attenuationColor={liquidColor}
+              attenuationDistance={0.3}
+            />
+          </mesh>
+          {/* Liquid surface meniscus ring */}
+          <mesh position={[0, 0.007, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.113, 0.006, 16, 64]} />
+            <meshPhysicalMaterial
+              color={liquidColor}
+              transparent
+              opacity={0.45}
+              roughness={0.0}
+              transmission={0.6}
+              ior={1.34}
+              clearcoat={1.0}
+              clearcoatRoughness={0.0}
+            />
+          </mesh>
+          {/* Surface highlight */}
+          <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.07, 64]} />
+            <meshBasicMaterial
+              color="#ffffff"
+              transparent
+              opacity={0.08}
+            />
+          </mesh>
         </group>
       )}
 
-      {/* Invisible larger hit-area */}
-      <mesh position={[0, 0.02, 0]}>
-        <cylinderGeometry args={[0.18, 0.18, 0.1, 16]} />
+      {/* === ROOT TIPS === */}
+      {rootTipsInWatchGlass && (
+        <group position={[0, -0.002, 0]}>
+          {[...Array(6)].map((_, i) => {
+            const angle = (i / 6) * Math.PI * 2 + i * 0.3;
+            const r = 0.04 + (i % 3) * 0.025;
+            return (
+              <mesh
+                key={i}
+                position={[
+                  Math.cos(angle) * r,
+                  0,
+                  Math.sin(angle) * r,
+                ]}
+                rotation={[Math.PI / 2 + (Math.random() - 0.5) * 0.4, i * 0.8, 0]}
+              >
+                <cylinderGeometry args={[0.0018, 0.001, 0.022, 8]} />
+                <meshStandardMaterial
+                  color={stainAdded ? '#e57373' : '#f0e6c8'}
+                  roughness={0.6}
+                  metalness={0.0}
+                />
+              </mesh>
+            );
+          })}
+        </group>
+      )}
+
+      {/* === Invisible hit area === */}
+      <mesh position={[0, 0.0, 0]}>
+        <cylinderGeometry args={[0.2, 0.2, 0.1, 16]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>
   );
 };
-
 
 export default WatchGlass;
