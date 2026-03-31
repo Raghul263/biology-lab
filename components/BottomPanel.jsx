@@ -34,6 +34,7 @@ const BottomPanel = () => {
     coverSlipApplied,
     slideOnMicroscope,
     resetExperiment,
+    previousStep,
     microscopeZoomed,
   } = useStore();
 
@@ -109,8 +110,8 @@ const BottomPanel = () => {
       {/* Buttons */}
       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
         <button
-          onClick={useStore.getState().previousStep}
-          disabled={currentStep === 1}
+          onClick={previousStep}
+          disabled={currentStep === STEPS.ARRANGE}
           style={{
             padding: '8px 18px',
             background: 'rgba(255,255,255,0.07)',
