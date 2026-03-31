@@ -123,21 +123,21 @@ function Scene() {
         <group>
           <LabRoom />
           <DropTarget />
-          {placedComponents.beaker && <Beaker position={getPos('beaker', [-2.0, 0.93, -0.3])} />}
-          {placedComponents.onion && <Onion position={getPos('onion', [-1.5, 0.93, -0.1])} />}
-          {placedComponents.tile && <Tile position={getPos('tile', [-0.9, 0.93, 0])} />}
-          {placedComponents.scalpel && <Scalpel position={getPos('scalpel', [-0.4, 0.93, 0.3])} />}
-          {placedComponents.forceps && <Forceps position={getPos('forceps', [-0.2, 0.93, -0.25])} />}
-          {placedComponents.needle && <Needle position={getPos('needle', [0.1, 0.93, 0.35])} />}
-          {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [0.85, 0.93, -0.1])} />}
-          {placedComponents.vial && <FixativeVial position={getPos('vial', [1.5, 0.93, -0.3])} />}
-          {placedComponents.dropper && <Dropper position={getPos('dropper', [1.7, 0.93, 0.1])} />}
-          {placedComponents.burner && <Burner position={getPos('burner', [2.1, 0.93, -0.1])} />}
-          {placedComponents.slide && <Slide position={getPos('slide', [0.9, 0.93, 0.3])} />}
-          {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [1.2, 0.93, 0.45])} />}
-          {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [0.3, 0.93, 0.3])} />}
-          {placedComponents.microscope && <Microscope position={getPos('microscope', [0, 1.0, -0.45])} />}
-          {currentStep >= STEPS.TRANSFER_Vial && <RootTip position={[0.85, 0.935, -0.1]} />}
+          {placedComponents.beaker && <Beaker position={getPos('beaker', [2.5, 0.93, -3.5])} />}
+          {placedComponents.onion && <Onion position={getPos('onion', [3.0, 0.93, -3.2])} />}
+          {placedComponents.tile && <Tile position={getPos('tile', [3.5, 0.93, -3])} />}
+          {placedComponents.scalpel && <Scalpel position={getPos('scalpel', [3.8, 0.93, -2.8])} />}
+          {placedComponents.forceps && <Forceps position={getPos('forceps', [4.0, 0.93, -3.3])} />}
+          {placedComponents.needle && <Needle position={getPos('needle', [4.2, 0.93, -2.9])} />}
+          {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [4.5, 0.93, -3.4])} />}
+          {placedComponents.vial && <FixativeVial position={getPos('vial', [2.0, 0.93, -3.1])} />}
+          {placedComponents.dropper && <Dropper position={getPos('dropper', [2.2, 0.93, -2.7])} />}
+          {placedComponents.burner && <Burner position={getPos('burner', [4.8, 0.93, -3.2])} />}
+          {placedComponents.slide && <Slide position={getPos('slide', [3.2, 0.93, -2.8])} />}
+          {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [3.4, 0.93, -2.6])} />}
+          {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [2.8, 0.93, -2.9])} />}
+          {placedComponents.microscope && <Microscope position={getPos('microscope', [3.5, 1.0, -3.8])} />}
+          {currentStep >= STEPS.TRANSFER_Vial && <RootTip position={[4.5, 0.935, -3.4]} />}
         </group>
       </Suspense>
 
@@ -147,7 +147,7 @@ function Scene() {
         makeDefault 
         minPolarAngle={Math.PI / 6} 
         maxPolarAngle={Math.PI / 2.5}
-        target={[0, 1.2, 0]}
+        target={[3.5, 1.2, -3]}
         minDistance={2}
         maxDistance={9}
       />
