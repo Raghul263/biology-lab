@@ -4,17 +4,16 @@ import useStore, { STEPS } from '../lib/store';
 import * as THREE from 'three';
 
 const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
-  const { 
-    currentStep, tipOnSlide, waterAdded, stainAdded, 
-    setStep, setStates, heldTool, setHeldTool, 
-    coverSlipApplied, squashed, heated
+  const {
+    currentStep, rootOnSlide, waterDropAdded, stainAdded, hclAdded,
+    setStep, setStates, heldTool, setHeldTool,
+    coverSlipPlaced, squashed, narrate, showWrongAction, dropperContents
   } = useStore();
   const [isDragging, setIsDragging] = useState(false);
   const [currentPos, setCurrentPos] = useState(initialPosition);
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  // Only drag towards microscope in MICROSCOPE step
   useFrame(() => {
     if (isDragging) {
       const intersection = new THREE.Vector3();
@@ -27,7 +26,8 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
 
   const handlePointerDown = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.MICROSCOPE && coverSlipApplied && !isDragging) {
+    // Step 8: Drag slide to microscope
+    if (currentStep === STEPS.MICROSCOPE && squashed && !isDragging) {
       setIsDragging(true);
       try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
     }
@@ -37,57 +37,80 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
     if (!isDragging) return;
     setIsDragging(false);
     try { e.target.releasePointerCapture(e.pointerId); } catch (err) {}
-    
-    const [x, y, z] = currentPos;
-    const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.45];
-    // Dropped near dynamic microscope position
+
+    const [x, , z] = currentPos;
+    const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
     if (Math.abs(x - microPos[0]) < 0.25 && Math.abs(z - microPos[2]) < 0.3) {
       setStates({ slideOnMicroscope: true });
       setCurrentPos([microPos[0], microPos[1] + 0.1, microPos[2] + 0.08]);
+      narrate('Slide placed on the microscope. Click the microscope to observe mitosis stages.');
     }
   };
 
   const handleInteraction = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.PREPARATION) {
+
+    // Step 5: Forceps places root on slide
+    if (currentStep === STEPS.PLACE_ON_SLIDE) {
       const state = useStore.getState();
-      if (heldTool === 'forceps' && state.rootsInForceps && !tipOnSlide) {
-        // Step: Put root tip from forceps onto slide
-        setStates({ tipOnSlide: true, rootsInForceps: false });
+      if (heldTool === 'forceps' && state.rootsInForceps && !rootOnSlide) {
+        setStates({ rootOnSlide: true, rootsInForceps: false });
         setHeldTool(null);
-      } else if (heldTool === 'filterPaper' && tipOnSlide && !state.stainRemoved) {
-        // Step: Blot excess stain with filter paper
+        narrate('Root tip placed on the slide. Now add chemicals.');
+        setStep(STEPS.CHEMICAL_TREAT);
+      }
+    }
+    // Step 6: Dropper applies chemicals
+    else if (currentStep === STEPS.CHEMICAL_TREAT && heldTool === 'dropper') {
+      if (dropperContents === 'hcl' && !hclAdded) {
+        setStates({ hclAdded: true, dropperContents: null });
+        setHeldTool(null);
+        narrate('HCl applied. Now dip the dropper into the acetocarmine stain beaker.');
+      } else if (dropperContents === 'stain' && hclAdded && !stainAdded) {
+        setStates({ stainAdded: true, dropperContents: null });
+        setHeldTool(null);
+        narrate('Acetocarmine stain applied. The slide is turning red. Proceed to heating.');
+        setStep(STEPS.SLIDE_PREP);
+      } else if (!dropperContents) {
+        showWrongAction('Dip the dropper into a beaker first.');
+      }
+    }
+    // Step 7: Multiple sub-steps on the slide
+    else if (currentStep === STEPS.SLIDE_PREP) {
+      const state = useStore.getState();
+      if (heldTool === 'filterPaper' && !state.stainRemoved) {
         setStates({ stainRemoved: true });
         setHeldTool(null);
-      } else if (heldTool === 'dropper' && tipOnSlide && !waterAdded) {
-        // Step: Add one drop of water on root tip
-        setStates({ waterAdded: true });
+        narrate('Excess stain blotted. Fill the dropper with water and add one drop.');
+      } else if (heldTool === 'dropper' && dropperContents === 'water' && !waterDropAdded) {
+        setStates({ waterDropAdded: true, dropperContents: null });
         setHeldTool(null);
-      } else if (heldTool === 'needle' && tipOnSlide && waterAdded && state.coverSlipApplied && !squashed) {
-        // Step: Squash the meristematic tissue with needle
+        narrate('Water drop added. Now place the cover slip on the slide.');
+      } else if (heldTool === 'needle' && coverSlipPlaced && !squashed) {
         setStates({ squashed: true });
-        setTimeout(() => setStep(STEPS.MICROSCOPE), 500);
         setHeldTool(null);
+        narrate('Tissue squashed. The slide is ready for observation. Drag it to the microscope.');
+        setStep(STEPS.MICROSCOPE);
       }
     }
   };
 
-  const showHighlight = (currentStep === STEPS.PREPARATION && heldTool) || 
-                         (currentStep === STEPS.MICROSCOPE && coverSlipApplied);
+  const showHighlight =
+    (currentStep === STEPS.PLACE_ON_SLIDE && heldTool === 'forceps') ||
+    (currentStep === STEPS.CHEMICAL_TREAT && heldTool === 'dropper') ||
+    (currentStep === STEPS.SLIDE_PREP && heldTool) ||
+    (currentStep === STEPS.MICROSCOPE && squashed);
 
   return (
-    <group 
-      position={currentPos}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
+    <group position={currentPos}
+      onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
       onClick={handleInteraction}
       onPointerOver={() => {
         if (currentStep === STEPS.MICROSCOPE) document.body.style.cursor = 'grab';
-        else if (currentStep === STEPS.PREPARATION) document.body.style.cursor = 'pointer';
+        else if (showHighlight) document.body.style.cursor = 'pointer';
       }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Step Highlight */}
       {showHighlight && (
         <group position={[0, 0.02, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -100,42 +123,36 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
       {/* Glass Slide */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[0.4, 0.005, 0.15]} />
-        <meshPhysicalMaterial 
-          color="#e1f5fe" 
-          transparent 
-          transmission={0.85} 
-          thickness={0.05}
-          roughness={0.01} 
-          ior={1.45}
-          clearcoat={1}
-        />
+        <meshPhysicalMaterial color="#e1f5fe" transparent transmission={0.85}
+          thickness={0.05} roughness={0.01} ior={1.45} clearcoat={1} />
       </mesh>
 
       {/* Root Tip on Slide */}
-      {tipOnSlide && (
+      {rootOnSlide && (
         <group position={[0, 0.003, 0]}>
           {/* Stain area */}
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <circleGeometry args={[0.03, 16]} />
-            <meshStandardMaterial color="#e91e63" transparent opacity={stainAdded ? 0.6 : 0.15} />
+            <meshStandardMaterial color={stainAdded ? "#c62828" : "#fdf5e6"} transparent
+              opacity={stainAdded ? 0.7 : 0.3} />
           </mesh>
-          {/* Water droplet */}
-          {waterAdded && (
+          {/* Water drop */}
+          {waterDropAdded && (
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
               <circleGeometry args={[0.04, 16]} />
               <meshPhysicalMaterial color="#4fc3f7" transparent opacity={0.3} transmission={0.9} />
             </mesh>
           )}
-          {/* The sample */}
-          <mesh position={[0, 0, 0]}>
+          {/* Sample */}
+          <mesh>
             <cylinderGeometry args={[0.005, 0.005, 0.02, 8]} />
-            <meshStandardMaterial color={stainAdded ? "#ffcdd2" : "#fdf5e6"} />
+            <meshStandardMaterial color={stainAdded ? "#e57373" : "#fdf5e6"} />
           </mesh>
         </group>
       )}
 
-      {/* Cover Slip if applied */}
-      {coverSlipApplied && (
+      {/* Cover Slip */}
+      {coverSlipPlaced && (
         <mesh position={[0, 0.008, 0]}>
           <boxGeometry args={[0.12, 0.002, 0.12]} />
           <meshPhysicalMaterial transparent opacity={0.4} transmission={0.9} color="#ffffff" />

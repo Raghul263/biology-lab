@@ -21,6 +21,8 @@ import RootTip from './RootTip';
 import Tile from './Tile';
 import Forceps from './Forceps';
 import Beaker from './Beaker';
+import HCLBeaker from './HCLBeaker';
+import StainBeaker from './StainBeaker';
 import Scalpel from './Scalpel';
 import CoverSlip from './CoverSlip';
 import Dropper from './Dropper';
@@ -42,7 +44,6 @@ class ErrorBoundary extends React.Component {
       <div style={{ padding: '40px', color: '#ff9800', textAlign: 'center', background: '#050a0f', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <h2>⚠️ 3D Rendering Error</h2>
         <p>Your browser or hardware might be unable to render the 3D laboratory. Please check if WebGL is enabled.</p>
-        <p style={{ fontSize: '12px', opacity: 0.7 }}>The experiment steps and HUD are still available in the panels.</p>
       </div>
     );
     return this.props.children;
@@ -51,7 +52,7 @@ class ErrorBoundary extends React.Component {
 
 function DropTarget() {
   const { camera, gl } = useThree();
-  
+
   useEffect(() => {
     const handleDragOver = (e) => {
       e.preventDefault();
@@ -69,7 +70,7 @@ function DropTarget() {
 
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-      
+
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
       const intersect = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersect);
@@ -77,13 +78,8 @@ function DropTarget() {
       if (intersect) {
         const store = useStore.getState();
         store.setSetupPosition(id, [intersect.x, 0.93, intersect.z]);
-        
-        const updated = { ...store.placedComponents, [id]: true };
-        const allPlaced = Object.values(updated).every(v => v === true);
-        if (allPlaced) {
-          store.setStep(STEPS.GROWTH_TILE);
-        }
         store.setPlaced(id, true);
+        store.checkAllPlaced();
       }
     };
 
@@ -101,13 +97,9 @@ function DropTarget() {
 function Scene() {
   const { microscopeZoomed, heldTool, placedComponents, currentStep, setupPositions } = useStore();
 
-  const getPos = (id, fallback) => {
-    if (setupPositions[id]) {
-      return setupPositions[id];
-    }
-    return fallback;
-  };
+  const getPos = (id, fallback) => setupPositions[id] || fallback;
 
+  // All components render once placed (they stay visible throughout the experiment)
   return (
     <>
       <ambientLight intensity={0.7} />
@@ -118,34 +110,50 @@ function Scene() {
       {!microscopeZoomed && (
         <PerspectiveCamera makeDefault position={[0, 3.0, 4.5]} fov={38} rotation={[-Math.PI / 6, 0, 0]} />
       )}
-      
-      <Suspense fallback={<group position={[0,1.2,0]}><mesh><boxGeometry args={[0.2,0.2,0.2]}/><meshBasicMaterial color="#4db6ac" wireframe /></mesh></group>}>
+
+      <Suspense fallback={
+        <group position={[0, 1.2, 0]}>
+          <mesh>
+            <sphereGeometry args={[0.05, 16, 16]} />
+            <meshStandardMaterial color="#ff9800" emissive="#ff9800" emissiveIntensity={2} />
+          </mesh>
+          <pointLight color="#ff9800" intensity={2} distance={2} />
+        </group>
+      }>
         <group>
           <LabRoom />
           <DropTarget />
-          {placedComponents.beaker && <Beaker position={getPos('beaker', [-1.0, 0.93, -0.3])} />}
+
+          {/* Three Beakers */}
+          {placedComponents.waterBeaker && <Beaker position={getPos('waterBeaker', [-1.2, 0.93, -0.3])} />}
+          {placedComponents.hclBeaker && <HCLBeaker position={getPos('hclBeaker', [-1.5, 0.93, -0.3])} />}
+          {placedComponents.stainBeaker && <StainBeaker position={getPos('stainBeaker', [-1.5, 0.93, 0.1])} />}
+
+          {/* Core Lab Items */}
           {placedComponents.onion && <Onion position={getPos('onion', [-0.5, 0.93, 0])} />}
           {placedComponents.tile && <Tile position={getPos('tile', [0, 0.93, 0.3])} />}
           {placedComponents.scalpel && <Scalpel position={getPos('scalpel', [0.4, 0.93, 0.5])} />}
           {placedComponents.forceps && <Forceps position={getPos('forceps', [0.6, 0.93, 0])} />}
           {placedComponents.needle && <Needle position={getPos('needle', [0.8, 0.93, 0.4])} />}
-          {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [1.2, 0.93, -0.1])} />}
-          {placedComponents.vial && <FixativeVial position={getPos('vial', [-1.5, 0.93, 0.1])} />}
+          {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [1.0, 0.93, -0.1])} />}
+          {placedComponents.vial && <FixativeVial position={getPos('vial', [-0.8, 0.93, 0.4])} />}
           {placedComponents.dropper && <Dropper position={getPos('dropper', [-1.3, 0.93, 0.5])} />}
-          {placedComponents.burner && <Burner position={getPos('burner', [1.6, 0.93, 0.1])} />}
-          {placedComponents.slide && <Slide position={getPos('slide', [-0.2, 0.93, 0.4])} />}
-          {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0, 0.93, 0.6])} />}
-          {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [-0.6, 0.93, 0.4])} />}
+          {placedComponents.burner && <Burner position={getPos('burner', [1.4, 0.93, 0.3])} />}
+          {placedComponents.slide && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
+          {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0.5, 0.93, 0.6])} />}
+          {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [-0.6, 0.93, 0.6])} />}
           {placedComponents.microscope && <Microscope position={getPos('microscope', [0, 1.0, -0.7])} />}
-          {currentStep >= STEPS.TRANSFER_Vial && <RootTip position={[1.2, 0.935, -0.1]} />}
+
+          {/* Root tip appears after fixation */}
+          {currentStep >= STEPS.PLACE_ON_SLIDE && <RootTip />}
         </group>
       </Suspense>
 
-      <OrbitControls 
+      <OrbitControls
         enabled={!microscopeZoomed}
         enableRotate={!heldTool}
-        makeDefault 
-        minPolarAngle={Math.PI / 4} 
+        makeDefault
+        minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 2.2}
         target={[0, 1.2, 0]}
         minDistance={1.5}
@@ -171,26 +179,15 @@ export default function Simulation() {
 
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: '#050a0f',
-      overflow: 'hidden',
-      fontFamily: '"Inter", system-ui, sans-serif',
+      width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column',
+      background: '#050a0f', overflow: 'hidden', fontFamily: '"Inter", system-ui, sans-serif',
     }}>
       {/* Top bar */}
       <div style={{
-        height: '46px',
-        minHeight: '46px',
-        background: 'rgba(5, 15, 25, 0.96)',
+        height: '46px', minHeight: '46px', background: 'rgba(5, 15, 25, 0.96)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex',
-        alignItems: 'center',
-        paddingLeft: '20px',
-        paddingRight: '20px',
-        zIndex: 100,
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '20px',
+        zIndex: 100, justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '20px' }}>🧬</span>
@@ -205,13 +202,9 @@ export default function Simulation() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
-            padding: '4px 12px',
-            background: 'rgba(42,157,143,0.15)',
-            border: '1px solid rgba(42,157,143,0.4)',
-            borderRadius: '20px',
-            fontSize: '11px',
-            color: '#4db6ac',
-            fontWeight: 600,
+            padding: '4px 12px', background: 'rgba(255,109,0,0.15)',
+            border: '1px solid rgba(255,109,0,0.4)', borderRadius: '20px',
+            fontSize: '11px', color: '#ff9800', fontWeight: 600,
           }}>
             🟢 SIMULATION ACTIVE
           </div>
@@ -223,32 +216,22 @@ export default function Simulation() {
 
       {/* Main content area */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-        {/* Left Panel */}
         <LeftPanel />
 
-        {/* Center: 3D Canvas */}
         <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
           <ErrorBoundary>
-            <Canvas 
-              shadows
-              onPointerMissed={() => useStore.getState().setHeldTool(null)}
-            >
+            <Canvas shadows onPointerMissed={() => useStore.getState().setHeldTool(null)}>
               <Scene />
             </Canvas>
           </ErrorBoundary>
 
-          {/* Floating HUD over the 3D scene */}
           <HUD />
-
-          {/* Microscope overlay */}
           {microscopeZoomed && <MicroscopeUI />}
         </div>
 
-        {/* Right Panel */}
         <RightPanel />
       </div>
 
-      {/* Bottom Panel */}
       <BottomPanel />
     </div>
   );

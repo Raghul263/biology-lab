@@ -1,10 +1,14 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import useStore from '../lib/store';
 import * as THREE from 'three';
+import useStore, { STEPS } from '../lib/store';
 
+/**
+ * Forceps (Tweezers Style) matching the serrated handle reference
+ * Features: Dark handle, joined back, pointed tips, visible roots.
+ */
 const Forceps = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, rootsInForceps } = useStore();
+  const { heldTool, setHeldTool, rootsInForceps, currentStep, showWrongAction } = useStore();
   const groupRef = useRef();
   const isHeld = heldTool === 'forceps';
   const { raycaster } = useThree();
@@ -15,26 +19,55 @@ const Forceps = ({ position = [0, 0, 0] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
-        groupRef.current.position.set(intersection.x, 0.96, intersection.z);
+        groupRef.current.position.set(intersection.x, 0.952, intersection.z);
+        groupRef.current.rotation.set(0, -Math.PI / 4, 0);
       }
     } else if (!isHeld && groupRef.current) {
       groupRef.current.position.set(...position);
+      groupRef.current.rotation.set(0, 0, 0);
     }
   });
 
+  const handleClick = (e) => {
+    e.stopPropagation();
+    const canUse = currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE || currentStep === STEPS.STAINING;
+    if (canUse) {
+      setHeldTool(isHeld ? null : 'forceps');
+    } else if (currentStep !== STEPS.ARRANGE) {
+      showWrongAction('Tweezers are not needed at this step.');
+    }
+  };
+
+  // ── REFINED GEOMETRY (Tweezers Style) ──────────────────────
+  const { armShape, extrudeSettings } = useMemo(() => {
+    // Tapered arm from back to very fine tip
+    const s = new THREE.Shape();
+    s.moveTo(0, -0.008);
+    s.lineTo(0.14, -0.001); // Narrowing to tip
+    s.lineTo(0.15, -0.001); // Tip
+    s.lineTo(0.15, 0.001);
+    s.lineTo(0.14, 0.001);
+    s.lineTo(0, 0.008);
+    s.lineTo(0, -0.008);
+
+    return { 
+      armShape: s, 
+      extrudeSettings: { depth: 0.004, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.001 } 
+    };
+  }, []);
+
+  const showHighlight = !isHeld && (currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE || currentStep === STEPS.STAINING);
+
   return (
     <group 
-      ref={groupRef}
-      onClick={(e) => {
-        e.stopPropagation();
-        setHeldTool(isHeld ? null : 'forceps');
-      }}
+      ref={groupRef} 
+      onPointerDown={handleClick}
       onPointerOver={() => (document.body.style.cursor = 'pointer')}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Universal Step Highlight (Only if not held) */}
-      {!isHeld && (
-        <group position={[0, 0.02, 0]}>
+      {/* Interaction Highlight */}
+      {showHighlight && (
+        <group position={[0.07, 0.02, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.08, 0.005, 16, 32]} />
             <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
@@ -42,36 +75,56 @@ const Forceps = ({ position = [0, 0, 0] }) => {
         </group>
       )}
 
-      {/* Forceps Body */}
-      <group rotation={[0, Math.PI / 2, 0]} scale={[1.3, 1.3, 1.3]}>
-
-        {/* Left Arm */}
-        <mesh castShadow position={[0, 0, -0.01]} rotation={[0, 0, 0.05]}>
-          <boxGeometry args={[0.15, 0.005, 0.01]} />
-          <meshStandardMaterial color="#cfd8dc" metalness={0.9} roughness={0.1} />
-        </mesh>
-        {/* Right Arm */}
-        <mesh castShadow position={[0, 0, 0.01]} rotation={[0, 0, -0.05]}>
-          <boxGeometry args={[0.15, 0.005, 0.01]} />
-          <meshStandardMaterial color="#cfd8dc" metalness={0.9} roughness={0.1} />
+      {/* Forceps Body (Tweezers Style) */}
+      <group rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 1]}>
+        
+        {/* Back Joint (where they are joined) */}
+        <mesh position={[0, 0, 0]} castShadow>
+          <boxGeometry args={[0.005, 0.016, 0.006]} />
+          <meshStandardMaterial color="#37474f" roughness={0.4} metalness={0.7} />
         </mesh>
 
-        {/* Joint/Handle end */}
-        <mesh castShadow position={[-0.075, 0, 0]}>
-          <boxGeometry args={[0.01, 0.008, 0.02]} />
-          <meshStandardMaterial color="#616161" metalness={0.8} roughness={0.3} />
-        </mesh>
-        {/* Held Root Tips visually */}
+        {/* Top Arm */}
+        <group rotation={[0, 0, 0.06]} position={[0, 0.002, 0]}>
+          <mesh castShadow>
+            <extrudeGeometry args={[armShape, extrudeSettings]} />
+            <meshStandardMaterial color="#263238" roughness={0.6} metalness={0.5} />
+          </mesh>
+          {/* Grip Ridges (Serrated) */}
+          {[...Array(12)].map((_, i) => (
+            <mesh key={i} position={[0.04 + (i * 0.004), 0.004, 0.001]} castShadow>
+              <boxGeometry args={[0.002, 0.002, 0.008]} />
+              <meshStandardMaterial color="#1a237e" roughness={0.3} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Bottom Arm (Mirrored) */}
+        <group rotation={[0, 0, -0.06]} position={[0, -0.002, 0]} scale={[1, -1, 1]}>
+          <mesh castShadow>
+            <extrudeGeometry args={[armShape, extrudeSettings]} />
+            <meshStandardMaterial color="#263238" roughness={0.6} metalness={0.5} />
+          </mesh>
+          {/* Grip Ridges (Serrated) */}
+          {[...Array(12)].map((_, i) => (
+            <mesh key={i} position={[0.04 + (i * 0.004), 0.004, 0.001]} castShadow>
+              <boxGeometry args={[0.002, 0.002, 0.008]} />
+              <meshStandardMaterial color="#1a237e" roughness={0.3} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Carried Roots (Clearly visible at the tip) */}
         {rootsInForceps && (
-          <group position={[0.07, 0, 0]}>
+          <group position={[0.155, 0, 0.003]}>
             {[...Array(3)].map((_, i) => (
-              <mesh 
-                key={i}
-                position={[(Math.random()-0.5)*0.005, 0, (Math.random()-0.5)*0.005]}
+              <mesh key={i}
+                position={[(Math.random()-0.5)*0.01, 0, (Math.random()-0.5)*0.005]}
                 rotation={[Math.PI / 2, Math.random() * Math.PI, 0]}
               >
-                <cylinderGeometry args={[0.002, 0.002, 0.015, 8]} />
-                <meshStandardMaterial color="#fdf5e6" />
+                {/* Brighter, clearly visible roots */}
+                <cylinderGeometry args={[0.004, 0.004, 0.02, 8]} />
+                <meshStandardMaterial color="#ffecb3" emissive="#fff176" emissiveIntensity={0.4} />
               </mesh>
             ))}
           </group>

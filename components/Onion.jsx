@@ -1,118 +1,128 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
-
 import useStore, { STEPS } from '../lib/store';
 
-const OnionPeel = ({ rotation, phiStart, phiLength, scale = 1 }) => {
-  const points = React.useMemo(() => {
+/* ── Pink Onion Shell with Perfect Proportions ──────────────── */
+const OnionShell = ({ scale = 0.45, color = "#d81b60" }) => {
+  const { points, lineGeometry } = React.useMemo(() => {
     const pts = [];
     const s = 0.5 * scale;
-    // BULBOUS SHAPE with slightly shorter, robust neck
-    pts.push(new THREE.Vector2(0, -0.05 * s)); // Base
-    pts.push(new THREE.Vector2(0.28 * s, 0.05 * s)); // Wide belly
-    pts.push(new THREE.Vector2(0.38 * s, 0.25 * s)); // Widest part
-    pts.push(new THREE.Vector2(0.32 * s, 0.45 * s)); // Tapering begins
-    pts.push(new THREE.Vector2(0.15 * s, 0.60 * s)); // Robust neck
-    pts.push(new THREE.Vector2(0.06 * s, 0.75 * s)); // Neck tip
-    return pts;
+    // EXACT SHAPE: Matches Slide 2 - Perfect breadth and tapering
+    pts.push(new THREE.Vector2(0, -0.02 * s));
+    pts.push(new THREE.Vector2(0.12 * s, -0.01 * s));
+    pts.push(new THREE.Vector2(0.32 * s, 0.04 * s));
+    pts.push(new THREE.Vector2(0.46 * s, 0.18 * s)); 
+    pts.push(new THREE.Vector2(0.36 * s, 0.32 * s));
+    pts.push(new THREE.Vector2(0.20 * s, 0.44 * s));
+    pts.push(new THREE.Vector2(0.08 * s, 0.58 * s));
+    pts.push(new THREE.Vector2(0.04 * s, 0.82 * s));
+    pts.push(new THREE.Vector2(0, 0.90 * s));
+
+    const linePts = pts.map(p => new THREE.Vector3(p.x, p.y, 0));
+    const lGeom = new THREE.BufferGeometry().setFromPoints(linePts);
+
+    return { points: pts, lineGeometry: lGeom };
   }, [scale]);
 
-  const skinColor = "#ad1457"; // Vibrant Magenta/Purple
-  const skinRoughness = 0.45;
-
   return (
-    <group rotation={[0, rotation, 0]} position={[0, 0, 0]}>
+    <group position={[0, 0.1, 0]}>
       <mesh castShadow receiveShadow>
-        <latheGeometry args={[points, 32, phiStart, phiLength]} />
+        <latheGeometry args={[points, 32]} />
         <meshStandardMaterial 
-          color={skinColor} 
-          roughness={skinRoughness} 
-          metalness={0.1} 
-          emissive="#6a0080" 
-          emissiveIntensity={0.2} 
+          color={color} 
+          roughness={0.65} 
+          metalness={0.1}
+          emissive="#ad1457" 
+          emissiveIntensity={0.12} 
         />
       </mesh>
-      
-      {/* Texture Lines (Prominent lighter skin veins) */}
-      {[0.08, 0.18, 0.28].map((phiOffset, i) => (
-        <mesh key={i} rotation={[0, phiOffset, 0]}>
-          <latheGeometry args={[points, 32, 0, 0.007]} />
-          <meshBasicMaterial color="#ff4081" opacity={0.35} transparent /> 
-        </mesh>
+
+      {/* Subtle Striations */}
+      {[...Array(24)].map((_, i) => (
+        <primitive 
+          key={i}
+          object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({ color: '#880e4f', opacity: 0.3, transparent: true }))}
+          rotation={[0, (i * Math.PI) / 12, 0]}
+        />
       ))}
 
-      {/* Base Root Disk */}
-      <mesh position={[0, -0.02 * scale, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.1 * scale, 32]} />
+      {/* Root Base Plug */}
+      <mesh position={[0, -0.02 * (0.5 * scale), 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.04 * (0.5 * scale), 16]} />
         <meshStandardMaterial color="#8d6e63" roughness={1} />
       </mesh>
     </group>
   );
 };
 
+/* ── Root tendril (Compact short cluster) ───────────────── */
 const RootTendril = ({ index }) => {
   const curve = React.useMemo(() => {
-    const points = [];
-    const length = 0.04 + (Math.sin(index * 1.5) * 0.03); 
-    const angle = (index / 100) * Math.PI * 2;
-    const radius = 0.01 + Math.random() * 0.06;
-    
-    points.push(new THREE.Vector3(Math.cos(angle) * (radius * 0.1), 0, Math.sin(angle) * (radius * 0.1)));
-    
-    for (let j = 1; j <= 3; j++) {
-      const p = j / 3;
-      points.push(new THREE.Vector3(
-        (Math.cos(angle) * radius * p) + (Math.random() - 0.5) * 0.02,
+    const pts = [];
+    const length = 0.12 + (Math.sin(index * 3) * 0.04);
+    const angle = (index / 40) * Math.PI * 2;
+    const radius = 0.005 + Math.random() * 0.025;
+    pts.push(new THREE.Vector3(Math.cos(angle) * (radius * 0.5), 0, Math.sin(angle) * (radius * 0.5)));
+    for (let j = 1; j <= 5; j++) {
+      const p = j / 5;
+      pts.push(new THREE.Vector3(
+        (Math.cos(angle) * radius * 0.7) + (Math.sin(p * 2.5 + index) * 0.01),
         -length * p,
-        (Math.sin(angle) * radius * p) + (Math.random() - 0.5) * 0.02
+        (Math.sin(angle) * radius * 0.7) + (Math.cos(p * 2.5 + index) * 0.01)
       ));
     }
-    return new THREE.CatmullRomCurve3(points);
+    return new THREE.CatmullRomCurve3(pts);
   }, [index]);
-
   return (
     <mesh castShadow>
-      <tubeGeometry args={[curve, 4, 0.001, 4, false]} />
-      <meshStandardMaterial color="#a1887f" roughness={1} transparent opacity={0.8} />
+      <tubeGeometry args={[curve, 6, 0.002, 4, false]} />
+      <meshStandardMaterial color="#fffef0" roughness={1.0} metalness={0} />
     </mesh>
   );
 };
 
-const FreshShoot = ({ index }) => {
-  const curve = React.useMemo(() => {
-    const points = [];
-    const height = 0.15 + Math.random() * 0.15; // VIBRANT FRESH shoots
-    const angle = (index / 12) * Math.PI * 2;
-    const radius = 0.003 + Math.random() * 0.008;
-    
-    points.push(new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius));
-    
-    // Vertical pointed growth
-    for (let j = 1; j <= 3; j++) {
-      const p = j / 3;
-      points.push(new THREE.Vector3(
-        (Math.cos(angle) * radius * (1 - p * 0.5)) + (Math.random() - 0.5) * 0.01,
-        height * p,
-        (Math.sin(angle) * radius * (1 - p * 0.5)) + (Math.random() - 0.5) * 0.01
-      ));
+/* ── Sharp Leaf Shoots (Tucked perfectly) ───────────────── */
+const FreshShoot = ({ index, count }) => {
+  const { points, height } = React.useMemo(() => {
+    const pts = [];
+    const h = 0.12 + Math.random() * 0.04;
+    for (let i = 0; i <= 10; i++) {
+        const t = i / 10;
+        const radius = (0.008 * (1 - t * 0.95)) + 0.001; 
+        pts.push(new THREE.Vector2(radius, t * h));
     }
-    return new THREE.CatmullRomCurve3(points);
-  }, [index]);
+    return { points: pts, height: h };
+  }, []);
 
-  return (
-    <mesh castShadow>
-      <tubeGeometry args={[curve, 8, 0.006 * (1 - index/16), 8, false]} />
-      <meshStandardMaterial color="#4caf50" roughness={0.5} /> 
-    </mesh>
-  );
-};
-
-const Onion = ({ position = [0, 0.93, 0] }) => {
-  const { currentStep, setStep, setStates, initialRootsGrown, beakerRootsGrown, heldTool, setHeldTool, onionInBeaker, onionPlacedOnTile } = useStore();
-  const isHeld = heldTool === 'onion';
-  const [rootScale, setRootScale] = useState(0.4);
+  const angle = (index / count) * Math.PI * 2;
+  const tilt = 0.08 + Math.random() * 0.05;
   
+  return (
+    <group rotation={[0, angle, 0]}>
+      {/* Zero internal offset for perfect external control */}
+      <group rotation={[tilt, 0, 0]} position={[0, 0, 0]}>
+        <mesh castShadow>
+          <latheGeometry args={[points, 12]} />
+          <meshStandardMaterial color="#76ff03" roughness={0.5} emissive="#004400" emissiveIntensity={0.08} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
+/* ── MAIN ONION COMPONENT ───────────────────────────────── */
+const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
+  const {
+    currentStep, setStep, setStates, heldTool, setHeldTool, narrate, showWrongAction,
+    onionOnTile, dryRootsCut, onionOnBeaker, rootsGrown, onionAtWatchGlass
+  } = useStore();
+
+  const isHeld = heldTool === 'onion';
+  const [rootScale, setRootScale] = useState(0.5);
+  const [showClock, setShowClock] = useState(false);
+  const [clockDay, setClockDay] = useState(0);
+
   const targetPos = useRef(new THREE.Vector3(...position));
   const targetRot = useRef(new THREE.Euler(0, 0, 0));
   const meshRef = useRef();
@@ -129,129 +139,159 @@ const Onion = ({ position = [0, 0.93, 0] }) => {
       }
     }
     if (meshRef.current) {
-      meshRef.current.position.lerp(targetPos.current, 0.1);
+      meshRef.current.position.lerp(targetPos.current, 0.11);
       const targetQuat = new THREE.Quaternion().setFromEuler(targetRot.current);
-      meshRef.current.quaternion.slerp(targetQuat, 0.15);
+      meshRef.current.quaternion.slerp(targetQuat, 0.16);
     }
   });
 
   useEffect(() => {
     if (!meshRef.current) return;
     const { setupPositions } = useStore.getState();
-    const tilePos = setupPositions['tile'] || [0, 0.93, 0];
-    const beakerPos = setupPositions['beaker'] || [-1.0, 0.93, -0.3];
+    const tilePos = setupPositions['tile'] || [0, 0.93, 0.3];
+    const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
+    const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
 
-    if (currentStep === STEPS.ARRANGE) {
+    if (currentStep === STEPS.CUT_DRY_ROOTS && onionOnTile) {
+      targetPos.current.set(tilePos[0], tilePos[1] + 0.05, tilePos[2]);
+      targetRot.current.set(0, 0, Math.PI / 2);
+    } else if ((currentStep === STEPS.ROOT_GROWTH || currentStep === STEPS.CUT_FRESH_ROOTS) && onionOnBeaker && !onionAtWatchGlass && !isHeld) {
+      targetPos.current.set(beakerPos[0], beakerPos[1] + 0.12, beakerPos[2]);
+      targetRot.current.set(0, 0, 0);
+    } else if (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && !isHeld) {
+      targetPos.current.set(wgPos[0], wgPos[1] + 0.05, wgPos[2]);
+      targetRot.current.set(0, 0, Math.PI / 2);
+    } else if (currentStep > STEPS.CUT_FRESH_ROOTS && !isHeld) {
+      targetPos.current.set(position[0] - 0.2, position[1], position[2] + 0.1);
+      targetRot.current.set(0, 0, 0);
+    } else if (!isHeld && currentStep <= STEPS.CUT_DRY_ROOTS && !onionOnTile) {
       targetPos.current.set(...position);
       targetRot.current.set(0, 0, 0);
-    } else if ((currentStep === STEPS.GROWTH_TILE && onionPlacedOnTile) || currentStep === STEPS.CUT_INITIAL) {
-      targetPos.current.set(tilePos[0], tilePos[1] + 0.1, tilePos[2]);
-      targetRot.current.set(0, 0, Math.PI / 2);
-    } else if (currentStep === STEPS.GROWTH_BEAKER && onionInBeaker) {
-      targetPos.current.set(beakerPos[0], beakerPos[1] + 0.15, beakerPos[2]); 
-      targetRot.current.set(0, 0, 0);
-    } else if (currentStep === STEPS.CUT_FRESH) {
-      targetPos.current.set(tilePos[0], tilePos[1] + 0.1, tilePos[2]);
-      targetRot.current.set(0, 0, Math.PI / 2);
     }
-  }, [currentStep, onionPlacedOnTile, onionInBeaker, position]);
+  }, [currentStep, onionOnTile, onionOnBeaker, onionAtWatchGlass, position, isHeld]);
 
   useEffect(() => {
-    if (currentStep === STEPS.GROWTH_TILE && onionPlacedOnTile && !initialRootsGrown) {
-      setTimeout(() => {
-        setStates({ initialRootsGrown: true });
-        setStep(STEPS.CUT_INITIAL);
-      }, 1000);
-    }
-  }, [currentStep, onionPlacedOnTile, initialRootsGrown]);
-
-  useEffect(() => {
-    if (currentStep === STEPS.GROWTH_BEAKER && onionInBeaker && !beakerRootsGrown) {
-      let progress = 0.5;
+    if (currentStep === STEPS.ROOT_GROWTH && onionOnBeaker && !rootsGrown) {
+      setShowClock(true);
+      setClockDay(0);
+      let day = 0;
       const interval = setInterval(() => {
-        progress += 0.01;
-        setRootScale(progress);
-        if (progress >= 1.5) {
+        day += 1;
+        setClockDay(day);
+        setRootScale(0.5 + day * 0.3);
+        if (day >= 6) {
           clearInterval(interval);
-          setStates({ beakerRootsGrown: true });
-          setStep(STEPS.CUT_FRESH);
+          setShowClock(false);
+          setStates({ rootsGrown: true });
+          setStep(STEPS.CUT_FRESH_ROOTS);
+          narrate('Root tips grown. Transfer to watch glass to cut root tips.');
         }
-      }, 100);
+      }, 800);
       return () => clearInterval(interval);
     }
-  }, [currentStep, onionInBeaker, beakerRootsGrown]);
+  }, [currentStep, onionOnBeaker, rootsGrown]);
 
   const handlePointerDown = (e) => {
     e.stopPropagation();
-    const canPick = currentStep === STEPS.GROWTH_TILE || currentStep === STEPS.GROWTH_BEAKER;
-    if (canPick) setHeldTool(isHeld ? null : 'onion');
+    if (currentStep === STEPS.CUT_DRY_ROOTS && !onionOnTile) {
+      if (isHeld) {
+        const tilePos = useStore.getState().setupPositions['tile'] || [0, 0.93, 0.3];
+        const pos = meshRef.current.position;
+        if (Math.abs(pos.x - tilePos[0]) < 0.3 && Math.abs(pos.z - tilePos[2]) < 0.3) {
+          setStates({ onionOnTile: true });
+          setHeldTool(null);
+          narrate('Onion placed on cutting tile.');
+        } else setHeldTool(null);
+      } else setHeldTool('onion');
+    } else if (currentStep === STEPS.ROOT_GROWTH && !onionOnBeaker && dryRootsCut) {
+      if (isHeld) {
+        const beakerPos = useStore.getState().setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
+        const pos = meshRef.current.position;
+        if (Math.abs(pos.x - beakerPos[0]) < 0.3 && Math.abs(pos.z - beakerPos[2]) < 0.3) {
+          setStates({ onionOnBeaker: true });
+          setHeldTool(null);
+          narrate('Onion placed in beaker.');
+        } else setHeldTool(null);
+      } else setHeldTool('onion');
+    } else if (currentStep === STEPS.CUT_FRESH_ROOTS && !onionAtWatchGlass) {
+      if (isHeld) {
+        const wgPos = useStore.getState().setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
+        const pos = meshRef.current ? meshRef.current.position : targetPos.current;
+        if (Math.abs(pos.x - wgPos[0]) < 0.3 && Math.abs(pos.z - wgPos[2]) < 0.3) {
+          setStates({ onionAtWatchGlass: true });
+          setHeldTool(null);
+          narrate('Onion placed at watch glass.');
+        } else setHeldTool(null);
+      } else setHeldTool('onion');
+    }
   };
 
   const handleCut = (e) => {
     e.stopPropagation();
     if (heldTool === 'scalpel') {
-      setStates({ isCutting: true });
-      setTimeout(() => {
-        setStates({ isCutting: false });
-        if (currentStep === STEPS.CUT_INITIAL) {
-          setStates({ rootTipsInWatchGlass: true });
-          setStep(STEPS.GROWTH_BEAKER);
-          setRootScale(0.1);
-        } else if (currentStep === STEPS.CUT_FRESH) {
-          setStep(STEPS.TRANSFER_Vial);
-          setRootScale(0.1);
-        }
+      if (currentStep === STEPS.CUT_DRY_ROOTS && onionOnTile && !dryRootsCut) {
+        setStates({ dryRootsCut: true });
         setHeldTool(null);
-      }, 600);
+        setRootScale(0.1);
+        setTimeout(() => setStep(STEPS.ROOT_GROWTH), 600);
+      } else if (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && !useStore.getState().freshRootsCut) {
+        setStates({ freshRootsCut: true, rootsInWatchGlass: true });
+        setHeldTool(null);
+        setTimeout(() => setStep(STEPS.FIXATION), 600);
+      }
     }
   };
 
+  const s = 0.45;
+  const bottomY = 0.1 - (0.02 * (0.5 * s));
+
   return (
     <group ref={meshRef} onPointerDown={handlePointerDown}>
-      <group position={[0, 0.05, 0]}>
-        {/* Bulbous Body with Shorter Neck */}
-        {[...Array(12)].map((_, i) => (
-          <OnionPeel 
-            key={i} 
-            rotation={(i * Math.PI) / 6} 
-            phiStart={0} 
-            phiLength={Math.PI / 6 + 0.02} 
-            scale={1} 
-          />
-        ))}
+      <group position={[0, -0.0955, 0]}>
+        <OnionShell scale={s} color="#d81b60" />
 
-        {/* Vibrant Fresh Top Shoots */}
-        <group position={[0, 0.38, 0]}>
-          {[...Array(16)].map((_, i) => (
-            <FreshShoot key={`shoot-${i}`} index={i} />
+        {/* Shoots positioned into the neck */}
+        <group position={[0, 0.28, 0]}>
+          {[...Array(4)].map((_, i) => (
+            <FreshShoot key={`shoot-${i}`} index={i} count={4} />
           ))}
         </group>
- 
-        {/* Roots */}
-        <group position={[0, -0.02, 0]} scale={[1, rootScale, 1]}>
-          {[...Array(100)].map((_, i) => (
+
+        {/* Roots flush at base */}
+        <group position={[0, 0.0955, 0]} scale={[1, rootScale, 1]}>
+          {[...Array(40)].map((_, i) => (
             <RootTendril key={`root-${i}`} index={i} />
           ))}
         </group>
       </group>
 
-      {/* Highlights */}
-      {((currentStep === STEPS.GROWTH_TILE && !onionPlacedOnTile) || (currentStep === STEPS.GROWTH_BEAKER && !onionInBeaker)) && !isHeld && (
-        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.22, 0.005, 16, 32]} />
-          <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
-        </mesh>
+      {/* Target Highlights */}
+      {((currentStep === STEPS.CUT_DRY_ROOTS && !onionOnTile) ||
+        (currentStep === STEPS.ROOT_GROWTH && !onionOnBeaker && dryRootsCut) ||
+        (currentStep === STEPS.CUT_FRESH_ROOTS && !onionAtWatchGlass)) && !isHeld && (
+        <group position={[0, 0.02, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.08, 0.005, 16, 32]} />
+            <meshBasicMaterial color="#ff9800" transparent opacity={0.6} />
+          </mesh>
+        </group>
       )}
 
-      {(currentStep === STEPS.CUT_INITIAL || currentStep === STEPS.CUT_FRESH) && (
-        <group position={[0, 0, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.12, 0.005, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
+      {((currentStep === STEPS.CUT_DRY_ROOTS && onionOnTile && heldTool === 'scalpel') ||
+       (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && heldTool === 'scalpel')) ? (
+        <group position={[0, -0.01, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} onClick={handleCut}>
+            <torusGeometry args={[0.05, 0.004, 16, 32]} />
+            <meshBasicMaterial color="#ff5252" transparent opacity={0.7} />
           </mesh>
-          <mesh onClick={handleCut} onPointerOver={() => (document.body.style.cursor = heldTool === 'scalpel' ? 'copy' : 'auto')} onPointerOut={() => (document.body.style.cursor = 'auto')}>
-            <cylinderGeometry args={[0.15, 0.15, 0.1, 8]} />
-            <meshBasicMaterial transparent opacity={0} />
+        </group>
+      ) : null}
+
+      {showClock && (
+        <group position={[0, 0.35, 0]}>
+          <mesh>
+             <boxGeometry args={[0.12, 0.06, 0.01]} />
+             <meshBasicMaterial color="#000000" transparent opacity={0.8} />
           </mesh>
         </group>
       )}

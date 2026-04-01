@@ -2,30 +2,26 @@ import React from 'react';
 import useStore, { STEPS } from '../lib/store';
 
 const Tile = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, setStep, setStates, currentStep } = useStore();
+  const { heldTool, setHeldTool, setStates, currentStep, showWrongAction, narrate } = useStore();
 
   const handleInteraction = (e) => {
     e.stopPropagation();
-    if (heldTool === 'onion' && currentStep === STEPS.GROWTH_TILE) {
-      setStates({ onionPlacedOnTile: true });
+    if (heldTool === 'onion' && currentStep === STEPS.CUT_DRY_ROOTS) {
+      setStates({ onionOnTile: true });
       setHeldTool(null);
-    } else if (heldTool === 'slide' && currentStep === STEPS.PREPARATION) {
-       // logic for slide prep
+      narrate('Onion placed on the cutting tile. Select the blade to cut the dry roots.');
+    } else if (currentStep !== STEPS.ARRANGE && heldTool) {
+      showWrongAction('Follow the procedure.');
     }
   };
 
-  const showHighlight = currentStep === STEPS.GROWTH_TILE || currentStep === STEPS.CUT_INITIAL || currentStep === STEPS.CUT_FRESH;
+  const showHighlight = currentStep === STEPS.CUT_DRY_ROOTS && heldTool === 'onion';
 
   return (
-    <group 
-      position={position}
-      onClick={handleInteraction}
-      onPointerOver={() => {
-        if (heldTool === 'onion' || heldTool === 'scalpel') document.body.style.cursor = 'copy';
-      }}
+    <group position={position} onClick={handleInteraction}
+      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'copy'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Universal Step Highlight */}
       {showHighlight && (
         <group position={[0, 0.03, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -34,12 +30,10 @@ const Tile = ({ position = [0, 0, 0] }) => {
           </mesh>
         </group>
       )}
-      {/* Ceramic Tile Base */}
-      <mesh receiveShadow position={[0, 0, 0]}>
+      <mesh receiveShadow>
         <boxGeometry args={[0.5, 0.02, 0.5]} />
         <meshStandardMaterial color="#34495e" roughness={0.4} metalness={0.1} />
       </mesh>
-      {/* Invisible larger click area */}
       <mesh position={[0, 0.05, 0]}>
         <boxGeometry args={[0.6, 0.1, 0.6]} />
         <meshBasicMaterial transparent opacity={0} />
@@ -47,6 +41,5 @@ const Tile = ({ position = [0, 0, 0] }) => {
     </group>
   );
 };
-
 
 export default Tile;

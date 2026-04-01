@@ -1,80 +1,114 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore from '../lib/store';
+import useStore, { STEPS } from '../lib/store';
 
 const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
-  const { heldTool, setHeldTool } = useStore();
+  const { heldTool, setHeldTool, currentStep, showWrongAction } = useStore();
   const isHeld = heldTool === 'scalpel';
   const meshRef = useRef();
-  const { raycaster, mouse, camera } = useThree();
+  const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  const isCutting = useStore(state => state.isCutting);
-  const cutAnimOffset = useRef(0);
-
-  useFrame((state) => {
-    if (isCutting) {
-      // Rapid chop motion
-      const t = state.clock.getElapsedTime() * 20;
-      cutAnimOffset.current = Math.abs(Math.sin(t)) * 0.06;
-    } else {
-      cutAnimOffset.current = THREE.MathUtils.lerp(cutAnimOffset.current, 0, 0.15);
-    }
-
+  useFrame(() => {
     if (isHeld && meshRef.current) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
-        meshRef.current.position.set(intersection.x, 0.93 + 0.02 + cutAnimOffset.current, intersection.z);
+        meshRef.current.position.set(intersection.x, 0.952, intersection.z);
+        meshRef.current.rotation.set(0, -Math.PI / 2, 0); // Horizontal grab
       }
     } else if (!isHeld && meshRef.current) {
-      meshRef.current.position.set(initialPosition[0], initialPosition[1] + 0.02, initialPosition[2]);
+      meshRef.current.position.set(initialPosition[0], initialPosition[1] + 0.005, initialPosition[2]);
+      meshRef.current.rotation.set(0, Math.PI / 4, 0);
     }
   });
 
+  const handleClick = (e) => {
+    e.stopPropagation();
+    const canUse = currentStep === STEPS.CUT_DRY_ROOTS || currentStep === STEPS.CUT_FRESH_ROOTS;
+    if (canUse) {
+      setHeldTool(isHeld ? null : 'scalpel');
+    } else if (currentStep !== STEPS.ARRANGE) {
+      showWrongAction('The scalpel is not needed at this step.');
+    }
+  };
+
+  // ── REFINED GEOMETRY ─────────────────────────────────────
+  const { handleShape, bladeShape, extrudeSettings } = useMemo(() => {
+    // Flat rounded handle
+    const h = new THREE.Shape();
+    const width = 0.015, length = 0.14, radius = 0.007;
+    h.moveTo(-length / 2 + radius, -width / 2);
+    h.lineTo(length / 2 - radius, -width / 2);
+    h.absarc(length / 2 - radius, 0, radius, -Math.PI / 2, Math.PI / 2, false);
+    h.lineTo(-length / 2 + radius, width / 2);
+    h.absarc(-length / 2 + radius, 0, radius, Math.PI / 2, -Math.PI / 2, false);
+
+    // Realistic Pointed Blade (Standard Scalpel #11/15)
+    const b = new THREE.Shape();
+    b.moveTo(0, -0.004);
+    b.lineTo(0.045, -0.002); // Top straight edge
+    b.bezierCurveTo(0.05, -0.001, 0.05, 0.001, 0.045, 0.002); // Tip
+    b.bezierCurveTo(0.035, 0.008, 0.01, 0.01, 0, 0.006); // Curved bottom edge
+    b.lineTo(0, -0.004);
+
+    return { 
+      handleShape: h, 
+      bladeShape: b, 
+      extrudeSettings: { depth: 0.002, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.001 } 
+    };
+  }, []);
+
   return (
     <group 
-      ref={meshRef}
-      onClick={() => setHeldTool(isHeld ? null : 'scalpel')}
+      ref={meshRef} 
+      onPointerDown={handleClick}
       onPointerOver={() => (document.body.style.cursor = 'pointer')}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
-      position={[0, 0.02, 0]} // Further anti-clipping elevation
     >
-      {/* Professional Scalpel Body */}
-      <group rotation={[0, 0, 0]} scale={[1.4, 1.4, 1.4]}>
+      {/* Interaction Highlight */}
+      {!isHeld && (currentStep === STEPS.CUT_DRY_ROOTS || currentStep === STEPS.CUT_FRESH_ROOTS) && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <torusGeometry args={[0.08, 0.004, 16, 32]} />
+          <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
+        </mesh>
+      )}
 
-        {/* Slender Surgical Handle */}
-        <mesh castShadow position={[0, 0, -0.05]}>
-          <boxGeometry args={[0.012, 0.006, 0.17]} />
-          <meshPhysicalMaterial color="#34495e" roughness={0.6} metalness={0.4} />
+      <group rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 1]}>
+        {/* Blue Plastic Handle */}
+        <mesh castShadow>
+          <extrudeGeometry args={[handleShape, extrudeSettings]} />
+          <meshStandardMaterial color="#00bcd4" roughness={0.7} metalness={0.1} />
         </mesh>
-        {/* Ergonomic Textured Grip */}
-        <mesh castShadow position={[0, 0, 0.04]}>
-          <boxGeometry args={[0.014, 0.008, 0.06]} />
-          <meshPhysicalMaterial color="#111111" roughness={1.0} />
+
+        {/* Grip Ridges (8 segments) */}
+        {[...Array(8)].map((_, i) => (
+          <mesh key={i} position={[0.03 + (i * 0.006), 0.001, 0]} castShadow>
+             <boxGeometry args={[0.002, 0.003, 0.012]} />
+             <meshStandardMaterial color="#0097a7" roughness={0.7} />
+          </mesh>
+        ))}
+
+        {/* Metallic Neck/Blade Holder */}
+        <mesh position={[0.07, 0.001, 0]} castShadow>
+          <boxGeometry args={[0.02, 0.0015, 0.008]} />
+          <meshStandardMaterial color="#ecf0f1" roughness={0.1} metalness={0.9} />
         </mesh>
-        {/* Slender Neck */}
-        <mesh castShadow position={[0, 0, 0.1]}>
-          <boxGeometry args={[0.004, 0.003, 0.08]} />
-          <meshPhysicalMaterial color="#ecf0f1" metalness={1} roughness={0.05} />
-        </mesh>
-        
-        {/* High-Contrast Surgical Blade */}
-        <group position={[0, 0, 0.14]}>
-          <mesh castShadow rotation={[0, 0, 0]}>
-            <cylinderGeometry args={[0.0003, 0.0015, 0.05, 3]} rotation={[Math.PI / 2, 0, 0]} />
+
+        {/* Realistic Pointed Blade */}
+        <group position={[0.085, 0.001, 0]}>
+          <mesh castShadow rotation={[0, 0, 0.1]}>
+            <extrudeGeometry args={[bladeShape, { depth: 0.0005, bevelEnabled: false }]} />
             <meshPhysicalMaterial 
               color="#ffffff" 
-              metalness={1} 
-              roughness={0.01} 
-              clearcoat={1}
+              metalness={0.9} 
+              roughness={0.1} 
+              clearcoat={1} 
+              clearcoatRoughness={0.02} 
+              emissive="#ffffff"
+              emissiveIntensity={0.15}
             />
-          </mesh>
-          {/* Razor Sharpness Reflection */}
-          <mesh position={[0, -0.0008, 0.005]} rotation={[0.2, 0, 0]}>
-            <boxGeometry args={[0.0001, 0.01, 0.04]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.6} />
           </mesh>
         </group>
       </group>
