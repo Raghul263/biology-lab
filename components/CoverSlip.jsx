@@ -4,7 +4,7 @@ import { useThree, useFrame } from '@react-three/fiber';
 import useStore, { STEPS } from '../lib/store';
 
 const CoverSlip = ({ position: initialPosition = [1.2, 0.93, 0.45] }) => {
-  const { currentStep, setStates, waterDropAdded, rootOnSlide, narrate, showWrongAction } = useStore();
+  const { currentStep, setStates, waterDropAdded, rootOnSlide, showWrongAction } = useStore();
   const [isDragging, setIsDragging] = useState(false);
   const [currentPos, setCurrentPos] = useState(initialPosition);
   const { raycaster } = useThree();
@@ -40,7 +40,6 @@ const CoverSlip = ({ position: initialPosition = [1.2, 0.93, 0.45] }) => {
     if (Math.abs(x - slidePos[0]) < 0.3 && Math.abs(z - slidePos[2]) < 0.2) {
       setStates({ coverSlipPlaced: true });
       setCurrentPos([slidePos[0], slidePos[1] + 0.005, slidePos[2]]);
-      narrate('Cover slip placed. Use the needle to gently tap and squash the tissue.');
     }
   };
 

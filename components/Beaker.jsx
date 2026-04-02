@@ -4,22 +4,17 @@ import { Text } from '@react-three/drei';
 import useStore, { STEPS } from '../lib/store';
 
 const Beaker = ({ position = [0, 0, 0] }) => {
-  const { currentStep, setStates, heldTool, setHeldTool, showWrongAction, setStep, narrate } = useStore();
+  const { currentStep, setStates, heldTool, setHeldTool, showWrongAction, setStep } = useStore();
 
   const handleClick = (e) => {
     e.stopPropagation();
-    // Step 2: Accept onion placement for root growth
     if (currentStep === STEPS.ROOT_GROWTH && heldTool === 'onion') {
       setStates({ onionOnBeaker: true });
       setHeldTool(null);
-      narrate('The onion is placed in water. Observe the root growth over 3 to 6 days.');
-    }
-    // Step 7: Dropper fills with water
-    else if (currentStep === STEPS.SLIDE_PREP && heldTool === 'dropper') {
+    } else if (currentStep === STEPS.SLIDE_PREP && heldTool === 'dropper') {
       const { stainRemoved, waterDropAdded } = useStore.getState();
       if (stainRemoved && !waterDropAdded) {
         setStates({ dropperContents: 'water' });
-        narrate('Dropper filled with water. Apply to the slide.');
       }
     }
   };
@@ -62,14 +57,12 @@ const Beaker = ({ position = [0, 0, 0] }) => {
         <meshPhysicalMaterial color="#ffffff" transmission={0.9} roughness={0.1} clearcoat={1} />
       </mesh>
 
-      {/* Liquid (Water) */}
       <group position={[0, 0, 0]}>
         <mesh receiveShadow position={[0, 0.1, 0]}>
           <cylinderGeometry args={[0.115, 0.115, 0.2, 32]} />
           <meshPhysicalMaterial color="#4fc3f7" transmission={0.4} ior={1.33}
             roughness={0.05} transparent opacity={0.65} metalness={0.1} />
         </mesh>
-        {/* Top Surface of Water */}
         <mesh position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.115, 32]} />
           <meshPhysicalMaterial color="#4fc3f7" transmission={0.2} roughness={0.0} transparent opacity={0.8} />
@@ -80,8 +73,6 @@ const Beaker = ({ position = [0, 0, 0] }) => {
         <cylinderGeometry args={[0.12, 0.12, 0.01, 64]} />
         <meshPhysicalMaterial color="#ffffff" transmission={0.95} ior={1.5} roughness={0.05} clearcoat={1} />
       </mesh>
-
-
 
       <mesh position={[0, 0.125, 0]}>
         <cylinderGeometry args={[0.18, 0.18, 0.3, 16]} />

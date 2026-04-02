@@ -2,20 +2,20 @@ import React from 'react';
 import useStore, { STEPS } from '../lib/store';
 
 const Tile = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, setStates, currentStep, showWrongAction, narrate } = useStore();
+  const { heldTool, setHeldTool, setStates, currentStep, showWrongAction } = useStore();
 
   const handleInteraction = (e) => {
     e.stopPropagation();
     if (heldTool === 'onion' && currentStep === STEPS.CUT_DRY_ROOTS) {
-      setStates({ onionOnTile: true });
+      setStates({ onionOnTile: true, onionOnBeaker: false, onionAtWatchGlass: false });
       setHeldTool(null);
-      narrate('Onion placed on the cutting tile. Select the blade to cut the dry roots.');
-    } else if (currentStep !== STEPS.ARRANGE && heldTool) {
+    } else if (heldTool === 'onion') {
       showWrongAction('Follow the procedure.');
+      setHeldTool(null);
     }
   };
 
-  const showHighlight = currentStep === STEPS.CUT_DRY_ROOTS && heldTool === 'onion';
+  const showHighlight = heldTool === 'onion' && currentStep === STEPS.CUT_DRY_ROOTS;
 
   return (
     <group position={position} onClick={handleInteraction}

@@ -24,6 +24,7 @@ const BottomPanel = () => {
   } = useStore();
 
   const handleSaveResult = () => {
+    if (currentStep < STEPS.MICROSCOPE) return;
     const data = {
       step: currentStep, dryRootsCut, rootsGrown, hclAdded, stainAdded,
       rootOnSlide, coverSlipPlaced, squashed, slideOnMicroscope,
@@ -43,7 +44,7 @@ const BottomPanel = () => {
         fontSize: '11px', letterSpacing: '2px', color: '#ff9800',
         fontWeight: 700, flexShrink: 0, marginRight: '8px',
       }}>
-        STATUS
+        STEP {currentStep + 1} / {STEP_COUNT}
       </div>
 
       <div style={{ display: 'flex', gap: '8px', flex: 1, overflowX: 'auto', scrollbarWidth: 'none' }}>
@@ -72,22 +73,6 @@ const BottomPanel = () => {
           ↺ RESET
         </button>
 
-        <button
-          onClick={handleSaveResult}
-          style={{
-            padding: '8px 18px',
-            background: currentStep >= STEPS.MICROSCOPE
-              ? 'linear-gradient(135deg, #ff6d00, #ff9100)'
-              : 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px',
-            color: currentStep >= STEPS.MICROSCOPE ? 'white' : 'rgba(255,255,255,0.3)',
-            fontSize: '12px', fontWeight: 700,
-            cursor: currentStep >= STEPS.MICROSCOPE ? 'pointer' : 'not-allowed',
-            letterSpacing: '1px',
-          }}
-        >
-          💾 SAVE RESULT
-        </button>
       </div>
     </div>
   );

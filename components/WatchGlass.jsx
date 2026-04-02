@@ -3,16 +3,17 @@ import * as THREE from 'three';
 import useStore, { STEPS } from '../lib/store';
 
 const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
-  const { currentStep, heldTool, setHeldTool, setStates, rootsInWatchGlass, showWrongAction } = useStore();
+  const { currentStep, heldTool, setStates, rootsInWatchGlass, showWrongAction } = useStore();
 
-  const showHighlight = (currentStep === STEPS.FIXATION && !useStore.getState().rootsInForceps && rootsInWatchGlass) ||
+  const showHighlight = (currentStep === STEPS.FIXATION && !useStore.getState().rootsInForceps && rootsInWatchGlass && heldTool === 'forceps') ||
     (currentStep === STEPS.CUT_FRESH_ROOTS && heldTool === 'onion');
 
   const handleInteraction = (e) => {
     e.stopPropagation();
-    // Step 4 (FIXATION): Forceps picks roots from watch glass
     if (currentStep === STEPS.FIXATION && heldTool === 'forceps' && rootsInWatchGlass) {
       setStates({ rootsInForceps: true, rootsInWatchGlass: false });
+    } else if (heldTool === 'forceps' && currentStep !== STEPS.FIXATION) {
+      showWrongAction('Follow the procedure.');
     }
   };
 
@@ -40,36 +41,19 @@ const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
       <mesh position={[0, 0, 0]} rotation={[Math.PI, 0, 0]} castShadow receiveShadow>
         <sphereGeometry args={[0.155, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
         <meshPhysicalMaterial 
-          side={THREE.DoubleSide} 
-          transparent 
-          opacity={0.25} 
-          roughness={0.0}
-          transmission={0.99} 
-          thickness={2.0} 
-          color="#ffffff" 
-          ior={1.52}
-          clearcoat={1.0} 
-          clearcoatRoughness={0.01}
-          specularIntensity={4.8} 
-          envMapIntensity={5.0} 
-          emissive="#ffffff"
-          emissiveIntensity={0.02}
+          side={THREE.DoubleSide} transparent opacity={0.25} roughness={0.0}
+          transmission={0.99} thickness={2.0} color="#ffffff" ior={1.52}
+          clearcoat={1.0} clearcoatRoughness={0.01} specularIntensity={4.8} 
+          envMapIntensity={5.0} emissive="#ffffff" emissiveIntensity={0.02}
         />
       </mesh>
 
       <mesh position={[0, -0.003, 0]} rotation={[Math.PI, 0, 0]}>
         <sphereGeometry args={[0.148, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.36]} />
         <meshPhysicalMaterial 
-          side={THREE.BackSide} 
-          transparent 
-          opacity={0.15}
-          roughness={0.0} 
-          transmission={1.0} 
-          thickness={1.0} 
-          color="#ffffff"
-          ior={1.52} 
-          clearcoat={1.0} 
-          envMapIntensity={4.0} 
+          side={THREE.BackSide} transparent opacity={0.15}
+          roughness={0.0} transmission={1.0} thickness={1.0} color="#ffffff"
+          ior={1.52} clearcoat={1.0} envMapIntensity={4.0} 
         />
       </mesh>
 
@@ -93,7 +77,6 @@ const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
           clearcoat={1.0} envMapIntensity={1.5} />
       </mesh>
 
-      {/* Root tips visible when in watch glass */}
       {rootsInWatchGlass && (
         <group position={[0, -0.002, 0]}>
           {[...Array(6)].map((_, i) => {

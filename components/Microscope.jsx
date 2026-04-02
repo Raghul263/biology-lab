@@ -2,14 +2,13 @@ import React from 'react';
 import useStore, { STEPS } from '../lib/store';
 
 const VibrantModernMicroscope = ({ position = [1.2, 0.93, 0] }) => {
-  const { toggleMicroscope, currentStep, slideOnMicroscope, narrate } = useStore();
+  const { toggleMicroscope, currentStep, slideOnMicroscope } = useStore();
 
   const showHighlight = currentStep === STEPS.MICROSCOPE;
 
   const handleClick = () => {
     if (currentStep === STEPS.MICROSCOPE && slideOnMicroscope) {
       toggleMicroscope(true);
-      narrate('Welcome to the microscope view. Click on any cell to identify its mitotic stage.');
     }
   };
 
@@ -26,7 +25,7 @@ const VibrantModernMicroscope = ({ position = [1.2, 0.93, 0] }) => {
   };
 
   return (
-    <group position={position} rotation={[0, -Math.PI / 4, 0]}
+    <group position={position} rotation={[0, 0, 0]}
       onClick={handleClick}
       onPointerOver={() => { if (showHighlight && slideOnMicroscope) document.body.style.cursor = 'zoom-in'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}

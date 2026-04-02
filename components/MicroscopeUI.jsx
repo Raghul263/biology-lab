@@ -38,7 +38,7 @@ const CellTile = ({ phase, isSelected, onClick, focus }) => {
 };
 
 const MicroscopeUI = () => {
-  const { toggleMicroscope, narrate } = useStore();
+  const { toggleMicroscope } = useStore();
   const [focus, setFocus] = useState(0.5);
   const [selectedCell, setSelectedCell] = useState(null);
 
@@ -54,8 +54,6 @@ const MicroscopeUI = () => {
 
   const handleCellClick = (cell) => {
     setSelectedCell(cell);
-    const phase = PHASES[cell.phase];
-    narrate(`${phase.name}. ${phase.description}`);
   };
 
   const activePhase = selectedCell ? PHASES[selectedCell.phase] : null;

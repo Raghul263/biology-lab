@@ -8,7 +8,6 @@ const OnionShell = ({ scale = 0.45, color = "#d81b60" }) => {
   const { points, lineGeometry } = React.useMemo(() => {
     const pts = [];
     const s = 0.5 * scale;
-    // EXACT SHAPE: Matches Slide 2 - Perfect breadth and tapering
     pts.push(new THREE.Vector2(0, -0.02 * s));
     pts.push(new THREE.Vector2(0.12 * s, -0.01 * s));
     pts.push(new THREE.Vector2(0.32 * s, 0.04 * s));
@@ -100,7 +99,6 @@ const FreshShoot = ({ index, count }) => {
   
   return (
     <group rotation={[0, angle, 0]}>
-      {/* Zero internal offset for perfect external control */}
       <group rotation={[tilt, 0, 0]} position={[0, 0, 0]}>
         <mesh castShadow>
           <latheGeometry args={[points, 12]} />
@@ -114,7 +112,7 @@ const FreshShoot = ({ index, count }) => {
 /* ── MAIN ONION COMPONENT ───────────────────────────────── */
 const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
   const {
-    currentStep, setStep, setStates, heldTool, setHeldTool, narrate, showWrongAction,
+    currentStep, setStep, setStates, heldTool, setHeldTool, showWrongAction,
     onionOnTile, dryRootsCut, onionOnBeaker, rootsGrown, onionAtWatchGlass
   } = useStore();
 
@@ -152,24 +150,22 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
     const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
     const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
 
-    if (currentStep === STEPS.CUT_DRY_ROOTS && onionOnTile) {
+    if (onionOnTile && !isHeld) {
       targetPos.current.set(tilePos[0], tilePos[1] + 0.05, tilePos[2]);
       targetRot.current.set(0, 0, Math.PI / 2);
-    } else if ((currentStep === STEPS.ROOT_GROWTH || currentStep === STEPS.CUT_FRESH_ROOTS) && onionOnBeaker && !onionAtWatchGlass && !isHeld) {
+    } else if (onionOnBeaker && !onionAtWatchGlass && !isHeld) {
       targetPos.current.set(beakerPos[0], beakerPos[1] + 0.12, beakerPos[2]);
       targetRot.current.set(0, 0, 0);
-    } else if (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && !isHeld) {
+    } else if (onionAtWatchGlass && !isHeld) {
       targetPos.current.set(wgPos[0], wgPos[1] + 0.05, wgPos[2]);
       targetRot.current.set(0, 0, Math.PI / 2);
-    } else if (currentStep > STEPS.CUT_FRESH_ROOTS && !isHeld) {
-      targetPos.current.set(position[0] - 0.2, position[1], position[2] + 0.1);
-      targetRot.current.set(0, 0, 0);
-    } else if (!isHeld && currentStep <= STEPS.CUT_DRY_ROOTS && !onionOnTile) {
+    } else if (!isHeld) {
       targetPos.current.set(...position);
       targetRot.current.set(0, 0, 0);
     }
-  }, [currentStep, onionOnTile, onionOnBeaker, onionAtWatchGlass, position, isHeld]);
+  }, [onionOnTile, onionOnBeaker, onionAtWatchGlass, position, isHeld]);
 
+  // Root growth logic — only during ROOT_GROWTH step
   useEffect(() => {
     if (currentStep === STEPS.ROOT_GROWTH && onionOnBeaker && !rootsGrown) {
       setShowClock(true);
@@ -183,8 +179,8 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
           clearInterval(interval);
           setShowClock(false);
           setStates({ rootsGrown: true });
-          setStep(STEPS.CUT_FRESH_ROOTS);
-          narrate('Root tips grown. Transfer to watch glass to cut root tips.');
+          // Auto-advance to next step
+          setTimeout(() => setStep(STEPS.CUT_FRESH_ROOTS), 800);
         }
       }, 800);
       return () => clearInterval(interval);
@@ -193,36 +189,52 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
 
   const handlePointerDown = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.CUT_DRY_ROOTS && !onionOnTile) {
-      if (isHeld) {
-        const tilePos = useStore.getState().setupPositions['tile'] || [0, 0.93, 0.3];
-        const pos = meshRef.current.position;
-        if (Math.abs(pos.x - tilePos[0]) < 0.3 && Math.abs(pos.z - tilePos[2]) < 0.3) {
-          setStates({ onionOnTile: true });
+    if (isHeld) {
+      const { setupPositions } = useStore.getState();
+      const pos = meshRef.current.position;
+      
+      const tilePos = setupPositions['tile'] || [0, 0.93, 0.3];
+      const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
+      const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
+
+      // Try placing on Tile — only during CUT_DRY_ROOTS
+      if (Math.abs(pos.x - tilePos[0]) < 0.3 && Math.abs(pos.z - tilePos[2]) < 0.3) {
+        if (currentStep === STEPS.CUT_DRY_ROOTS) {
+          setStates({ onionOnTile: true, onionOnBeaker: false, onionAtWatchGlass: false });
           setHeldTool(null);
-          narrate('Onion placed on cutting tile.');
-        } else setHeldTool(null);
-      } else setHeldTool('onion');
-    } else if (currentStep === STEPS.ROOT_GROWTH && !onionOnBeaker && dryRootsCut) {
-      if (isHeld) {
-        const beakerPos = useStore.getState().setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
-        const pos = meshRef.current.position;
-        if (Math.abs(pos.x - beakerPos[0]) < 0.3 && Math.abs(pos.z - beakerPos[2]) < 0.3) {
-          setStates({ onionOnBeaker: true });
+        } else {
+          showWrongAction('Follow the procedure.');
           setHeldTool(null);
-          narrate('Onion placed in beaker.');
-        } else setHeldTool(null);
-      } else setHeldTool('onion');
-    } else if (currentStep === STEPS.CUT_FRESH_ROOTS && !onionAtWatchGlass) {
-      if (isHeld) {
-        const wgPos = useStore.getState().setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
-        const pos = meshRef.current ? meshRef.current.position : targetPos.current;
-        if (Math.abs(pos.x - wgPos[0]) < 0.3 && Math.abs(pos.z - wgPos[2]) < 0.3) {
-          setStates({ onionAtWatchGlass: true });
+        }
+      } 
+      // Try placing in Beaker — only during ROOT_GROWTH
+      else if (Math.abs(pos.x - beakerPos[0]) < 0.3 && Math.abs(pos.z - beakerPos[2]) < 0.3) {
+        if (currentStep === STEPS.ROOT_GROWTH) {
+          setStates({ onionOnBeaker: true, onionOnTile: false, onionAtWatchGlass: false });
           setHeldTool(null);
-          narrate('Onion placed at watch glass.');
-        } else setHeldTool(null);
-      } else setHeldTool('onion');
+        } else {
+          showWrongAction('Follow the procedure.');
+          setHeldTool(null);
+        }
+      }
+      // Try placing at Watch Glass — only during CUT_FRESH_ROOTS
+      else if (Math.abs(pos.x - wgPos[0]) < 0.3 && Math.abs(pos.z - wgPos[2]) < 0.3) {
+        if (currentStep === STEPS.CUT_FRESH_ROOTS) {
+          setStates({ onionAtWatchGlass: true, onionOnTile: false, onionOnBeaker: false });
+          setHeldTool(null);
+        } else {
+          showWrongAction('Follow the procedure.');
+          setHeldTool(null);
+        }
+      }
+      else {
+        setHeldTool(null);
+      }
+    } else {
+      // Can only pick up onion during relevant steps
+      if (currentStep === STEPS.CUT_DRY_ROOTS || currentStep === STEPS.ROOT_GROWTH || currentStep === STEPS.CUT_FRESH_ROOTS) {
+        setHeldTool('onion');
+      }
     }
   };
 
@@ -233,17 +245,18 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
         setStates({ dryRootsCut: true });
         setHeldTool(null);
         setRootScale(0.1);
-        setTimeout(() => setStep(STEPS.ROOT_GROWTH), 600);
-      } else if (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && !useStore.getState().freshRootsCut) {
+        setStep(STEPS.ROOT_GROWTH);
+      } else if (currentStep === STEPS.CUT_FRESH_ROOTS && onionAtWatchGlass && !useStore.getState().freshRootsCut && rootsGrown) {
         setStates({ freshRootsCut: true, rootsInWatchGlass: true });
         setHeldTool(null);
-        setTimeout(() => setStep(STEPS.FIXATION), 600);
+        setStep(STEPS.FIXATION);
+      } else {
+        showWrongAction('Follow the procedure.');
       }
     }
   };
 
   const s = 0.45;
-  const bottomY = 0.1 - (0.02 * (0.5 * s));
 
   return (
     <group ref={meshRef} onPointerDown={handlePointerDown}>

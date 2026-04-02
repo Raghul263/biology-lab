@@ -1,13 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import useStore, { STEP_INFO } from '../lib/store';
 
 const HUD = () => {
-  const { currentStep, heldTool, setHeldTool, narrate, isVoiceEnabled, setStates, wrongActionMessage } = useStore();
+  const { currentStep, heldTool, setHeldTool, setStates, wrongActionMessage } = useStore();
   const info = STEP_INFO[currentStep] || { title: 'Biology Lab', instruction: 'Follow the laboratory procedure.' };
-
-  useEffect(() => {
-    narrate(`${info.title}. ${info.instruction}`);
-  }, [currentStep]);
 
   return (
     <>
@@ -35,16 +31,6 @@ const HUD = () => {
           }}>
             🧪 EXPERIMENT
           </div>
-          <button
-            onClick={() => setStates({ isVoiceEnabled: !isVoiceEnabled })}
-            style={{
-              background: 'none', border: 'none',
-              color: isVoiceEnabled ? '#ff9800' : 'rgba(255,255,255,0.3)',
-              cursor: 'pointer', fontSize: '16px', pointerEvents: 'auto',
-            }}
-          >
-            {isVoiceEnabled ? '🔊' : '🔇'}
-          </button>
         </div>
 
         <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#ff9800', fontWeight: 700 }}>

@@ -28,15 +28,14 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
       if (!isHeld) setHeldTool('filterPaper');
       else setHeldTool(null);
     } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Filter paper is not needed at this step.');
+      showWrongAction('Follow the procedure.');
     }
   };
 
-  const trayColor = "#01579b"; // Deeper Blue for the tray
+  const trayColor = "#01579b";
 
   return (
     <group>
-      {/* ─── THE STATIC TRAY ─── */}
       <group position={initialPosition} onClick={handleClick}
         onPointerOver={() => { if (currentStep === STEPS.SLIDE_PREP) document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => (document.body.style.cursor = 'auto')}
@@ -48,25 +47,21 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
           </mesh>
         )}
 
-        {/* Square Blue Base */}
         <mesh castShadow receiveShadow position={[0, 0.005, 0]}>
           <boxGeometry args={[0.2, 0.01, 0.2]} />
           <meshStandardMaterial color={trayColor} roughness={0.4} />
         </mesh>
 
-        {/* Circular Wall */}
         <mesh castShadow position={[0, 0.02, 0]}>
           <cylinderGeometry args={[0.095, 0.095, 0.03, 32, 1, true]} />
           <meshStandardMaterial color={trayColor} roughness={0.3} transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
 
-        {/* Tray Floor */}
         <mesh position={[0, 0.01, 0]}>
            <cylinderGeometry args={[0.09, 0.09, 0.002, 32]} />
            <meshStandardMaterial color={trayColor} roughness={0.3} />
         </mesh>
 
-        {/* Paper Stack inside the tray */}
         <group position={[0, 0.012, 0]}>
           {[...Array(6)].map((_, i) => (
             <mesh key={i} position={[0, i * 0.001, 0]} receiveShadow rotation={[0, Math.random() * Math.PI, 0]}>
@@ -77,14 +72,12 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
         </group>
       </group>
 
-      {/* ─── THE HELD SINGLE SHEET ─── */}
       {isHeld && (
         <group ref={heldRef}>
           <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
              <cylinderGeometry args={[0.088, 0.088, 0.001, 32]} />
              <meshStandardMaterial color="#ffffff" roughness={1} />
           </mesh>
-          {/* Subtle effect shadow */}
           <mesh position={[0, -0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
              <circleGeometry args={[0.09, 32]} />
              <meshBasicMaterial color="#01579b" transparent opacity={0.15} />
@@ -96,5 +89,3 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
 };
 
 export default FilterPaper;
-
-

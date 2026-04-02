@@ -6,7 +6,7 @@ import useStore, { STEPS } from '../lib/store';
 import VialRack from './VialRack';
 
 const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
-  const { currentStep, heldTool, setHeldTool, setStates, setStep, narrate, showWrongAction,
+  const { currentStep, heldTool, setHeldTool, setStates, setStep, showWrongAction,
     vialCapOpen, rootsInForceps, rootsInVial, fixationComplete } = useStore();
   const meshRef = useRef();
   const [showClock, setShowClock] = useState(false);
@@ -23,77 +23,73 @@ const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
   const handleClick = (e) => {
     e.stopPropagation();
 
-    // Step 4 (FIXATION): Open cap → drop roots → close cap → 24h
+    // STEP 4: FIXATION — open vial, drop roots, close, start fixation timer
     if (currentStep === STEPS.FIXATION) {
-      if (!vialCapOpen && !rootsInVial) {
-        // Open the cap first
-        if (rootsInForceps) {
+      if (!vialCapOpen) {
+        if (heldTool === 'forceps' && rootsInForceps && !rootsInVial) {
           setStates({ vialCapOpen: true });
-          narrate('Vial cap opened. Drop the root tips inside.');
+        } else if (heldTool === 'forceps' && !rootsInForceps) {
+          setStates({ vialCapOpen: true });
         } else {
-          showWrongAction('Pick root tips with forceps first.');
+          showWrongAction('Use forceps to interact with the vial.');
         }
-      } else if (vialCapOpen && rootsInForceps && !rootsInVial) {
-        // Drop roots using forceps
-        setStates({ rootsInVial: true, rootsInForceps: false, vialCapOpen: false });
-        setHeldTool(null);
-        narrate('Root tips are in the fixative. Closing cap. Fixing for 24 hours.');
+      } else {
+        if (heldTool === 'forceps' && rootsInForceps && !rootsInVial) {
+          setStates({ rootsInVial: true, rootsInForceps: false, vialCapOpen: false });
+          setHeldTool(null);
 
-        // Show clock animation
-        setShowClock(true);
-        let hour = 0;
-        const interval = setInterval(() => {
-          hour += 4;
-          setClockHour(hour);
-          if (hour >= 24) {
-            clearInterval(interval);
-            setShowClock(false);
-            setStates({ fixationComplete: true });
-            setStep(STEPS.PLACE_ON_SLIDE);
-            narrate('Fixation complete. Open the vial and place one root tip on the glass slide.');
-          }
-        }, 500);
-      } else if (rootsInVial && !vialCapOpen) {
-        showWrongAction('Wait for fixation to complete.');
+          setShowClock(true);
+          let hour = 0;
+          const interval = setInterval(() => {
+            hour += 4;
+            setClockHour(hour);
+            if (hour >= 24) {
+              clearInterval(interval);
+              setShowClock(false);
+              setStates({ fixationComplete: true });
+              setStep(STEPS.PLACE_ON_SLIDE);
+            }
+          }, 500);
+        }
       }
     }
-    // Step 5 (PLACE_ON_SLIDE): Open cap to retrieve roots
+    // STEP 5: PLACE_ON_SLIDE — retrieve fixed root
     else if (currentStep === STEPS.PLACE_ON_SLIDE) {
-      if (!vialCapOpen && fixationComplete && heldTool === 'forceps') {
-        setStates({ vialCapOpen: true });
-        narrate('Vial opened. Pick a root tip with forceps.');
-      } else if (vialCapOpen && heldTool === 'forceps' && !rootsInForceps) {
-        setStates({ rootsInForceps: true, vialCapOpen: false });
-        narrate('Root tip picked up. Place it on the glass slide.');
+      if (!vialCapOpen) {
+        if (heldTool === 'forceps') {
+          setStates({ vialCapOpen: true });
+        }
+      } else {
+        if (heldTool === 'forceps' && !rootsInForceps && rootsInVial && fixationComplete) {
+          setStates({ rootsInForceps: true, vialCapOpen: false });
+        }
       }
+    }
+    else {
+      showWrongAction('Follow the procedure.');
     }
   };
 
-  const showHighlight = (currentStep === STEPS.FIXATION && (rootsInForceps || vialCapOpen)) ||
-    (currentStep === STEPS.PLACE_ON_SLIDE && heldTool === 'forceps');
+  const showHighlight = (currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE) && heldTool === 'forceps';
 
   return (
     <group ref={meshRef} onPointerDown={handleClick}
       onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Vial Rack */}
       <VialRack position={[0, 0, 0]} />
 
-      {/* Body — Sunk slightly into the middle hole */}
       <mesh castShadow receiveShadow position={[0, 0.07, 0]}>
         <cylinderGeometry args={[0.02, 0.008, 0.12, 16]} />
         <meshPhysicalMaterial color="#ffffff" transparent opacity={0.4}
           transmission={0.8} thickness={0.5} roughness={0.2} />
       </mesh>
 
-      {/* Liquid */}
       <mesh position={[0, 0.06, 0]}>
         <cylinderGeometry args={[0.015, 0.01, 0.08, 16]} />
         <meshStandardMaterial color="#e3f2fd" transparent opacity={0.6} />
       </mesh>
 
-      {/* Roots inside */}
       {rootsInVial && (
         <group position={[0, 0.05, 0]}>
           {[...Array(3)].map((_, i) => (
@@ -106,7 +102,6 @@ const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
         </group>
       )}
 
-      {/* Lid — animated open/close */}
       <group position={[0, 0.132, 0]}
         rotation={vialCapOpen ? [0, 0, Math.PI / 2.5] : [0, 0, 0]}>
         <mesh>
@@ -115,13 +110,11 @@ const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
         </mesh>
       </group>
 
-      {/* Rim */}
       <mesh position={[0, 0.13, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.02, 0.003, 8, 24]} />
         <meshStandardMaterial color="#eeeeee" />
       </mesh>
 
-      {/* Highlight ring at base of rack */}
       {showHighlight && (
         <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.12, 0.003, 16, 32]} />
@@ -129,7 +122,6 @@ const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
         </mesh>
       )}
 
-      {/* Clock overlay above vial */}
       {showClock && (
         <group position={[0, 0.22, 0]}>
           <mesh>

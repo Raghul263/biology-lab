@@ -9,6 +9,7 @@ import useStore, { STEPS } from '../lib/store';
  */
 const Forceps = ({ position = [0, 0, 0] }) => {
   const { heldTool, setHeldTool, rootsInForceps, currentStep, showWrongAction } = useStore();
+  const canUse = currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE;
   const groupRef = useRef();
   const isHeld = heldTool === 'forceps';
   const { raycaster } = useThree();
@@ -30,11 +31,10 @@ const Forceps = ({ position = [0, 0, 0] }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    const canUse = currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE || currentStep === STEPS.STAINING;
     if (canUse) {
       setHeldTool(isHeld ? null : 'forceps');
     } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Tweezers are not needed at this step.');
+      showWrongAction('Follow the procedure.');
     }
   };
 
@@ -56,7 +56,7 @@ const Forceps = ({ position = [0, 0, 0] }) => {
     };
   }, []);
 
-  const showHighlight = !isHeld && (currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE || currentStep === STEPS.STAINING);
+  const showHighlight = !isHeld && canUse;
 
   return (
     <group 

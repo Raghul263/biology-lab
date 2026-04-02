@@ -41,7 +41,7 @@ const LeftPanel = () => {
       if (allowed && allowed.includes(currentStep)) {
         setHeldTool(heldTool === inst.id ? null : inst.id);
       } else if (allowed) {
-        showWrongAction('This tool is not needed right now.');
+        showWrongAction('Follow the procedure.');
       }
     }
   };
@@ -66,12 +66,19 @@ const LeftPanel = () => {
       </div>
 
       <div style={{
-        flex: 1, overflowY: 'auto', padding: '16px',
-        scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,109,0,0.5) transparent',
+        flex: 1, 
+        overflowY: 'auto', 
+        padding: '12px',
+        scrollbarWidth: 'thin', 
+        scrollbarColor: 'rgba(255,109,0,0.5) transparent',
+        display: currentStep === STEPS.ARRANGE ? 'grid' : 'block',
+        gridTemplateColumns: currentStep === STEPS.ARRANGE ? '1fr 1fr' : 'none',
+        gap: '8px',
       }}>
         {instruments.map((inst) => {
           const isPlaced = placedComponents[inst.id];
           const isSelected = heldTool === inst.id;
+          const isArrangeStep = currentStep === STEPS.ARRANGE;
 
           return (
             <div
@@ -79,30 +86,52 @@ const LeftPanel = () => {
               style={{
                 background: isSelected ? 'rgba(255,152,0,0.2)' : isPlaced ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
                 border: isSelected ? '1px solid #ff9800' : isPlaced ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px', padding: '12px', marginBottom: '10px',
+                borderRadius: '12px', 
+                padding: isArrangeStep ? '10px 6px' : '12px', 
+                marginBottom: isArrangeStep ? '0' : '10px',
                 cursor: 'pointer', transition: 'all 0.2s ease',
-                opacity: (currentStep === STEPS.ARRANGE && isPlaced) ? 0.4 : 1,
-                pointerEvents: (currentStep === STEPS.ARRANGE && isPlaced) ? 'none' : 'auto',
+                opacity: (isArrangeStep && isPlaced) ? 0.3 : 1,
+                pointerEvents: (isArrangeStep && isPlaced) ? 'none' : 'auto',
+                display: 'flex',
+                flexDirection: isArrangeStep ? 'column' : 'row',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: isArrangeStep ? '6px' : '12px',
+                position: 'relative',
               }}
-              draggable={currentStep === STEPS.ARRANGE && !isPlaced}
+              draggable={isArrangeStep && !isPlaced}
               onDragStart={(e) => {
                 e.dataTransfer.setData('inst_id', inst.id);
                 e.dataTransfer.effectAllowed = 'copy';
               }}
               onClick={() => handleInteract(inst)}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>{inst.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: isPlaced && currentStep === STEPS.ARRANGE ? '#9e9e9e' : 'white' }}>
-                    {inst.name}
-                  </div>
+              <span style={{ fontSize: isArrangeStep ? '22px' : '24px' }}>{inst.icon}</span>
+              <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                <div style={{ 
+                  fontSize: isArrangeStep ? '11px' : '13px', 
+                  fontWeight: 600, 
+                  color: isPlaced && isArrangeStep ? '#9e9e9e' : 'white',
+                  lineHeight: 1.2,
+                  whiteSpace: isArrangeStep ? 'normal' : 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}>
+                  {inst.name}
+                </div>
+                {!isArrangeStep && (
                   <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
                     {inst.desc}
                   </div>
-                </div>
-                {isPlaced && <span style={{ fontSize: '14px', color: '#ff9800' }}>✓</span>}
+                )}
               </div>
+              {isPlaced && (
+                <span style={{ 
+                  position: isArrangeStep ? 'absolute' : 'static',
+                  top: '5px', right: '5px',
+                  fontSize: '14px', color: '#ff9800' 
+                }}>✓</span>
+              )}
             </div>
           );
         })}

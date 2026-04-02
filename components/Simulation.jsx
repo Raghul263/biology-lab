@@ -9,7 +9,6 @@ import useStore, { STEPS } from '../lib/store';
 // UI Panels
 import HUD from './HUD';
 import LeftPanel from './LeftPanel';
-import RightPanel from './RightPanel';
 import BottomPanel from './BottomPanel';
 import MicroscopeUI from './MicroscopeUI';
 
@@ -71,15 +70,32 @@ function DropTarget() {
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
 
+      // Height of the table top is exactly 0.93
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
       const intersect = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersect);
 
       if (intersect) {
+        // TABLE DIMENSIONS: 4.4 x 1.8 (X: -2.2 to 2.2, Z: -0.9 to 0.9)
+        // Strict limits to prevent any overhanging:
+        const tableLimitX = 1.8; 
+        const tableLimitZ = 0.5; 
+        
         const store = useStore.getState();
-        store.setSetupPosition(id, [intersect.x, 0.93, intersect.z]);
-        store.setPlaced(id, true);
-        store.checkAllPlaced();
+
+        // Check if the drop is within the strict safe zone
+        if (Math.abs(intersect.x) <= 2.1 && Math.abs(intersect.z) <= 0.8) {
+          // Snap to the innermost safe position
+          const safeX = Math.max(-tableLimitX, Math.min(tableLimitX, intersect.x));
+          const safeZ = Math.max(-tableLimitZ, Math.min(tableLimitZ, intersect.z));
+          
+          store.setSetupPosition(id, [safeX, 0.93, safeZ]);
+          store.setPlaced(id, true);
+          store.checkAllPlaced();
+        } else {
+          // Warning for imprecise placement
+          store.showWrongAction("Please place the equipment securely on the table surface.");
+        }
       }
     };
 
@@ -104,7 +120,6 @@ function Scene() {
     <>
       <ambientLight intensity={0.7} />
       <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
-      <pointLight position={[-3, 4, 3]} intensity={45} color="#e0f7fa" />
       <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
 
       {!microscopeZoomed && (
@@ -228,8 +243,6 @@ export default function Simulation() {
           <HUD />
           {microscopeZoomed && <MicroscopeUI />}
         </div>
-
-        <RightPanel />
       </div>
 
       <BottomPanel />

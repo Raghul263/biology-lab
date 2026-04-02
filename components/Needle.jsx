@@ -31,7 +31,7 @@ const Needle = ({ position = [0, 0, 0] }) => {
         showWrongAction('Place the cover slip first.');
       }
     } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('The needle is not needed at this step.');
+      showWrongAction('Follow the procedure.');
     }
   };
 
