@@ -1,30 +1,50 @@
 import React from 'react';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import useStore from '../lib/store';
 
-const StainBeaker = ({ position = [0, 0, 0] }) => {
-  const { currentStep, heldTool, setStates, showWrongAction } = useStore();
+const StainBeaker = ({ position: initialPosition = [-1.5, 0.93, 0.1] }) => {
+  const { setStates, heldTool, setHeldTool } = useStore();
+  const isHeld = heldTool === 'stainBeaker';
+  const groupRef = React.useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
+
+  useFrame(() => {
+    if (isHeld && groupRef.current) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(intersection.x, 0.93, intersection.z);
+      }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+      groupRef.current.position.set(...initialPosition);
+    }
+  });
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.CHEMICAL_TREAT && heldTool === 'dropper') {
-      const { hclAdded, stainAdded } = useStore.getState();
-      if (hclAdded && !stainAdded) {
-        setStates({ dropperContents: 'stain' });
-      } else if (!hclAdded) {
-        showWrongAction('Add HCl first, then the stain.');
-      } else {
-        showWrongAction('Stain already added.');
-      }
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('stainBeaker', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else if (heldTool === 'dropper') {
+      setStates({ dropperContents: 'STAIN' });
+    } else if (!heldTool) {
+      setHeldTool('stainBeaker');
     }
   };
 
-  const isActive = currentStep === STEPS.CHEMICAL_TREAT && heldTool === 'dropper' && useStore.getState().hclAdded && !useStore.getState().stainAdded;
+  const isActive = heldTool === 'dropper' || isHeld;
 
   return (
-    <group position={position} onPointerDown={handleClick}
-      onPointerOver={() => { if (isActive) document.body.style.cursor = 'copy'; }}
+    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
+      onPointerOver={() => { 
+        if (isActive || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+      }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {isActive && (

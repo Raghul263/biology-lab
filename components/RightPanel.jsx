@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import useStore, { STEPS } from '../lib/store';
 
 const STAGES = ['Interphase', 'Prophase', 'Metaphase', 'Anaphase', 'Telophase'];
 const STAGE_EMOJIS = ['🌑', '🔵', '🟢', '🟠', '🔴'];
 
 const RightPanel = () => {
-  const { currentStep } = useStore();
   const [stage, setStage] = useState('Prophase');
   const [notes, setNotes] = useState('');
   const [observations, setObservations] = useState([]);
-  const canObserve = currentStep >= STEPS.MICROSCOPE;
+  const canObserve = true; // Always unlocked in free-flow simulation
 
   const handleSave = () => {
     if (!notes.trim()) return;
@@ -43,14 +41,6 @@ const RightPanel = () => {
       </div>
 
       <div style={{ padding: '14px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-        {!canObserve && (
-          <div style={{
-            padding: '10px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px',
-            fontSize: '11px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginBottom: '10px',
-          }}>
-            🔬 Complete experiment to observe stages
-          </div>
-        )}
 
         <label style={{ display: 'block', fontSize: '11px', color: '#ffb74d', marginBottom: '5px', fontWeight: 600 }}>
           Observed Stage
@@ -74,8 +64,8 @@ const RightPanel = () => {
           Notes
         </label>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-          placeholder={canObserve ? 'Describe what you see...' : 'Complete experiment first'}
-          disabled={!canObserve} rows={3}
+          placeholder={'Describe what you see...'}
+          rows={3}
           style={{
             width: '100%', padding: '8px 10px', background: 'rgba(255,255,255,0.07)',
             border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px',

@@ -1,80 +1,84 @@
 import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
+import { useThree, useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 import VialRack from './VialRack';
 
-const FixativeVial = ({ position = [0.2, 0.93, -0.3] }) => {
-  const { currentStep, heldTool, setHeldTool, setStates, setStep, showWrongAction,
+const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
+  const { heldTool, setHeldTool, setStates,
     vialCapOpen, rootsInForceps, rootsInVial, fixationComplete } = useStore();
   const meshRef = useRef();
   const [showClock, setShowClock] = useState(false);
   const [clockHour, setClockHour] = useState(0);
 
-  const targetPos = useRef(new THREE.Vector3(...position));
+  const isHeld = heldTool === 'vial';
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
   useFrame(() => {
-    if (meshRef.current) {
-      meshRef.current.position.lerp(targetPos.current, 0.1);
+    if (isHeld && meshRef.current) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        meshRef.current.position.set(intersection.x, 0.93, intersection.z);
+      }
+    } else if (!isHeld && meshRef.current) {
+      meshRef.current.position.set(...initialPosition);
     }
   });
 
   const handleClick = (e) => {
     e.stopPropagation();
 
-    // STEP 4: FIXATION — open vial, drop roots, close, start fixation timer
-    if (currentStep === STEPS.FIXATION) {
-      if (!vialCapOpen) {
-        if (heldTool === 'forceps' && rootsInForceps && !rootsInVial) {
-          setStates({ vialCapOpen: true });
-        } else if (heldTool === 'forceps' && !rootsInForceps) {
-          setStates({ vialCapOpen: true });
-        } else {
-          showWrongAction('Use forceps to interact with the vial.');
-        }
-      } else {
-        if (heldTool === 'forceps' && rootsInForceps && !rootsInVial) {
-          setStates({ rootsInVial: true, rootsInForceps: false, vialCapOpen: false });
-          setHeldTool(null);
+    if (isHeld) {
+      const pos = meshRef.current.position;
+      useStore.getState().setSetupPosition('vial', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+      return;
+    }
 
-          setShowClock(true);
-          let hour = 0;
-          const interval = setInterval(() => {
-            hour += 4;
-            setClockHour(hour);
-            if (hour >= 24) {
-              clearInterval(interval);
-              setShowClock(false);
-              setStates({ fixationComplete: true });
-              setStep(STEPS.PLACE_ON_SLIDE);
-            }
-          }, 500);
-        }
-      }
-    }
-    // STEP 5: PLACE_ON_SLIDE — retrieve fixed root
-    else if (currentStep === STEPS.PLACE_ON_SLIDE) {
-      if (!vialCapOpen) {
-        if (heldTool === 'forceps') {
+    if (heldTool === 'forceps') {
+       if (!vialCapOpen) {
           setStates({ vialCapOpen: true });
-        }
-      } else {
-        if (heldTool === 'forceps' && !rootsInForceps && rootsInVial && fixationComplete) {
-          setStates({ rootsInForceps: true, vialCapOpen: false });
-        }
-      }
-    }
-    else {
-      showWrongAction('Follow the procedure.');
+       } else {
+          // Open Cap Interactions
+          if (rootsInForceps && !rootsInVial) {
+             setStates({ rootsInVial: true, rootsInForceps: false, vialCapOpen: false });
+             setHeldTool(null);
+             
+             // Time passing logic
+             setShowClock(true);
+             let hour = 0;
+             const interval = setInterval(() => {
+               hour += 4;
+               setClockHour(hour);
+               if (hour >= 24) {
+                 clearInterval(interval);
+                 setShowClock(false);
+                 setStates({ fixationComplete: true, onionRootsState: 'FIXED' });
+               }
+             }, 500);
+          } else if (!rootsInForceps && rootsInVial && fixationComplete) {
+             setStates({ rootsInForceps: true, rootsInVial: false, vialCapOpen: false });
+          } else if (!rootsInForceps && !rootsInVial) {
+             setStates({ vialCapOpen: false });
+          }
+       }
+    } else if (!heldTool) {
+       setHeldTool('vial');
     }
   };
 
-  const showHighlight = (currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE) && heldTool === 'forceps';
+  const showHighlight = heldTool === 'forceps' || isHeld;
 
   return (
     <group ref={meshRef} onPointerDown={handleClick}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'pointer'; }}
+      onPointerOver={() => { 
+        if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+      }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       <VialRack position={[0, 0, 0]} />

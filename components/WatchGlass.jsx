@@ -1,27 +1,58 @@
 import React from 'react';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import useStore from '../lib/store';
 
-const WatchGlass = ({ position = [0.35, 0.93, -0.2] }) => {
-  const { currentStep, heldTool, setStates, rootsInWatchGlass, showWrongAction } = useStore();
+const WatchGlass = ({ position: initialPosition = [0.35, 0.93, -0.2] }) => {
+  const { heldTool, setHeldTool, setStates, rootsInWatchGlass } = useStore();
+  const isHeld = heldTool === 'watchGlass';
+  const groupRef = React.useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  const showHighlight = (currentStep === STEPS.FIXATION && !useStore.getState().rootsInForceps && rootsInWatchGlass && heldTool === 'forceps') ||
-    (currentStep === STEPS.CUT_FRESH_ROOTS && heldTool === 'onion');
+  useFrame(() => {
+    if (isHeld && groupRef.current) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(intersection.x, 0.93, intersection.z);
+      }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+      groupRef.current.position.set(...initialPosition);
+    }
+  });
 
   const handleInteraction = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.FIXATION && heldTool === 'forceps' && rootsInWatchGlass) {
-      setStates({ rootsInForceps: true, rootsInWatchGlass: false });
-    } else if (heldTool === 'forceps' && currentStep !== STEPS.FIXATION) {
-      showWrongAction('Follow the procedure.');
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('watchGlass', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else if (heldTool === 'forceps') {
+      const { rootsInForceps, setStates, showWrongAction } = useStore.getState();
+      if (rootsInForceps) {
+        setStates({ rootsInForceps: false, rootsInWatchGlass: true });
+        showWrongAction('Root tips placed in Watch Glass.');
+      } else if (rootsInWatchGlass) {
+        setStates({ rootsInForceps: true, rootsInWatchGlass: false });
+        showWrongAction('Root tips picked up from Watch Glass.');
+      }
+    } else if (!heldTool) {
+      setHeldTool('watchGlass');
     }
   };
+
+  const showHighlight = (heldTool === 'forceps') || (heldTool === 'onion') || isHeld;
 
   const liquidColor = '#b3d9f5';
 
   return (
-    <group position={position} onClick={handleInteraction}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'copy'; }}
+    <group ref={groupRef} position={initialPosition} onClick={handleInteraction}
+      onPointerOver={() => { 
+        if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+      }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {showHighlight && (

@@ -1,15 +1,14 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 /**
  * Forceps (Tweezers Style) matching the serrated handle reference
  * Features: Dark handle, joined back, pointed tips, visible roots.
  */
 const Forceps = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, rootsInForceps, currentStep, showWrongAction } = useStore();
-  const canUse = currentStep === STEPS.FIXATION || currentStep === STEPS.PLACE_ON_SLIDE;
+  const { heldTool, setHeldTool, rootsInForceps } = useStore();
   const groupRef = useRef();
   const isHeld = heldTool === 'forceps';
   const { raycaster } = useThree();
@@ -20,10 +19,12 @@ const Forceps = ({ position = [0, 0, 0] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         groupRef.current.position.set(intersection.x, 0.952, intersection.z);
         groupRef.current.rotation.set(0, -Math.PI / 4, 0);
       }
-    } else if (!isHeld && groupRef.current) {
+    } else if (!isHeld && groupRef.current && position) {
       groupRef.current.position.set(...position);
       groupRef.current.rotation.set(0, 0, 0);
     }
@@ -31,10 +32,12 @@ const Forceps = ({ position = [0, 0, 0] }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (canUse) {
-      setHeldTool(isHeld ? null : 'forceps');
-    } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Follow the procedure.');
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else {
+      if (!heldTool) setHeldTool('forceps');
     }
   };
 
@@ -56,7 +59,7 @@ const Forceps = ({ position = [0, 0, 0] }) => {
     };
   }, []);
 
-  const showHighlight = !isHeld && canUse;
+  const showHighlight = !heldTool;
 
   return (
     <group 
@@ -130,6 +133,13 @@ const Forceps = ({ position = [0, 0, 0] }) => {
           </group>
         )}
       </group>
+      {/* Expanded Grab Trigger (Invisible) - Centered on Handle Area */}
+      {!isHeld && (
+        <mesh visible={false} position={[0.07, 0, 0]}>
+          <boxGeometry args={[0.2, 0.05, 0.2]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      )}
     </group>
   );
 };

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const RootTip = ({ position: initialPosition = [0.85, 0.95, -0.1] }) => {
-  const { currentStep, heldTool, setHeldTool, rootOnSlide, rootsInVial, stainAdded } = useStore();
+  const { heldTool, rootOnSlide, rootsInVial, stainAdded } = useStore();
   const isHeld = heldTool === 'root_tip';
   const [currentPos, setCurrentPos] = useState(initialPosition);
   const { raycaster } = useThree();
@@ -23,7 +23,7 @@ const RootTip = ({ position: initialPosition = [0.85, 0.95, -0.1] }) => {
     } else {
       setCurrentPos([wgPos[0], wgPos[1] + 0.02, wgPos[2]]);
     }
-  }, [currentStep, rootOnSlide, rootsInVial]);
+  }, [rootOnSlide, rootsInVial]);
 
   const meshRef = React.useRef();
   useFrame(() => {
@@ -31,6 +31,8 @@ const RootTip = ({ position: initialPosition = [0.85, 0.95, -0.1] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         meshRef.current.position.set(intersection.x, 0.96, intersection.z);
       }
     }

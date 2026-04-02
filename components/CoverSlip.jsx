@@ -1,52 +1,62 @@
 import React, { useState } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const CoverSlip = ({ position: initialPosition = [1.2, 0.93, 0.45] }) => {
-  const { currentStep, setStates, waterDropAdded, rootOnSlide, showWrongAction } = useStore();
-  const [isDragging, setIsDragging] = useState(false);
-  const [currentPos, setCurrentPos] = useState(initialPosition);
+  const { setStates, setHeldTool } = useStore();
+  const coverSlipPlaced = useStore((state) => state.coverSlipPlaced);
+  const heldTool = useStore((state) => state.heldTool);
+  const isHeld = heldTool === 'coverSlip';
+  const groupRef = React.useRef();
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  const canDrag = currentStep === STEPS.SLIDE_PREP && rootOnSlide && waterDropAdded && !useStore.getState().coverSlipPlaced;
+  const canDrag = !coverSlipPlaced;
 
   useFrame(() => {
-    if (isDragging) {
+    if (isHeld && groupRef.current) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
-        setCurrentPos([intersection.x, 0.93, intersection.z]);
+        const cx = Math.max(-2.0, Math.min(2.0, intersection.x));
+        const cz = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(cx, 0.93, cz);
       }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+        groupRef.current.position.set(...initialPosition);
     }
   });
 
-  const handlePointerDown = (e) => {
+  const handleClick = (e) => {
     e.stopPropagation();
-    if (canDrag) {
-      setIsDragging(true);
-      try { e.target.setPointerCapture(e.pointerId); } catch (err) {}
+    if (!canDrag) return;
+
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      const slidePos = useStore.getState().setupPositions['slide'] || [0.2, 0.93, 0.5];
+      
+      // Snap logic to slide
+      if (Math.abs(pos.x - slidePos[0]) < 0.3 && Math.abs(pos.z - slidePos[2]) < 0.2) {
+        setStates({ coverSlipPlaced: true });
+        // Cover slip doesn't need setupPosition update once placed, but we set its final state
+      } else {
+        useStore.getState().setSetupPosition('coverSlip', [pos.x, 0.93, pos.z]);
+      }
+      setHeldTool(null);
+    } else if (!heldTool) {
+      setHeldTool('coverSlip');
     }
   };
 
-  const handlePointerUp = (e) => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    try { e.target.releasePointerCapture(e.pointerId); } catch (err) {}
-
-    const [x, , z] = currentPos;
-    const slidePos = useStore.getState().setupPositions['slide'] || [0.2, 0.93, 0.5];
-    if (Math.abs(x - slidePos[0]) < 0.3 && Math.abs(z - slidePos[2]) < 0.2) {
-      setStates({ coverSlipPlaced: true });
-      setCurrentPos([slidePos[0], slidePos[1] + 0.005, slidePos[2]]);
-    }
-  };
+  if (coverSlipPlaced) return null;
 
   return (
-    <group position={currentPos}
-      onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
-      onPointerOver={() => { if (canDrag) document.body.style.cursor = 'grab'; }}
+    <group ref={groupRef} position={initialPosition}
+      onClick={handleClick}
+      onPointerOver={() => { 
+        if (canDrag) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+      }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {canDrag && (

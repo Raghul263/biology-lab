@@ -1,30 +1,50 @@
 import React from 'react';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import useStore from '../lib/store';
 
-const Beaker = ({ position = [0, 0, 0] }) => {
-  const { currentStep, setStates, heldTool, setHeldTool, showWrongAction, setStep } = useStore();
+const Beaker = ({ position: initialPosition = [-1.2, 0.93, -0.3] }) => {
+  const { setStates, heldTool, setHeldTool } = useStore();
+  const isHeld = heldTool === 'waterBeaker';
+  const groupRef = React.useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
+
+  useFrame(() => {
+    if (isHeld && groupRef.current) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(intersection.x, 0.93, intersection.z);
+      }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+      groupRef.current.position.set(...initialPosition);
+    }
+  });
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.ROOT_GROWTH && heldTool === 'onion') {
-      setStates({ onionOnBeaker: true });
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('waterBeaker', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
-    } else if (currentStep === STEPS.SLIDE_PREP && heldTool === 'dropper') {
-      const { stainRemoved, waterDropAdded } = useStore.getState();
-      if (stainRemoved && !waterDropAdded) {
-        setStates({ dropperContents: 'water' });
-      }
+    } else if (heldTool === 'dropper') {
+      setStates({ dropperContents: 'WATER' });
+    } else if (!heldTool) {
+      setHeldTool('waterBeaker');
     }
   };
 
-  const showHighlight = (currentStep === STEPS.ROOT_GROWTH && heldTool === 'onion') ||
-    (currentStep === STEPS.SLIDE_PREP && heldTool === 'dropper');
+  const showHighlight = heldTool === 'dropper' || isHeld;
 
   return (
-    <group position={position} onPointerDown={handleClick}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'copy'; }}
+    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
+      onPointerOver={() => { 
+        if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+      }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {showHighlight && (

@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
-  const { currentStep, heldTool, setHeldTool, showWrongAction, dropperContents } = useStore();
+  const { heldTool, setHeldTool, dropperContents } = useStore();
   const isHeld = heldTool === 'dropper';
   const meshRef = useRef();
   const { raycaster } = useThree();
@@ -15,28 +15,31 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         meshRef.current.position.set(intersection.x, 0.93, intersection.z);
       }
-    } else if (!isHeld && meshRef.current) {
+    } else if (!isHeld && meshRef.current && initialPosition) {
       meshRef.current.position.set(...initialPosition);
     }
   });
 
-  const handleClick = () => {
-    const canUse = currentStep === STEPS.CHEMICAL_TREAT || currentStep === STEPS.SLIDE_PREP;
-    if (canUse) {
-      if (!isHeld) setHeldTool('dropper');
-      else setHeldTool(null);
-    } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Follow the procedure.');
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (isHeld) {
+      const pos = meshRef.current.position;
+      useStore.getState().setSetupPosition('dropper', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else {
+      if (!heldTool) setHeldTool('dropper');
     }
   };
 
-  const liquidColor = dropperContents === 'hcl' ? '#4fc3f7' :
-                      dropperContents === 'stain' ? '#e91e63' :
-                      dropperContents === 'water' ? '#81d4fa' : null;
+  const liquidColor = dropperContents === 'HCL' ? '#4fc3f7' :
+                      dropperContents === 'STAIN' ? '#e91e63' :
+                      dropperContents === 'WATER' ? '#81d4fa' : null;
 
-  const showHighlight = !isHeld && (currentStep === STEPS.CHEMICAL_TREAT || currentStep === STEPS.SLIDE_PREP);
+  const showHighlight = !isHeld && !heldTool;
 
   return (
     <group>

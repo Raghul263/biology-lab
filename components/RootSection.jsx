@@ -1,13 +1,13 @@
 import React from 'react';
 import { useFrame } from '@react-three/fiber';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const RootSection = ({ position = [0, 1, 0] }) => {
-  const { currentStep, setStep, setStates, heldTool } = useStore();
+  const { setStates, heldTool } = useStore();
 
   const handleCut = (e) => {
     e.stopPropagation();
-    if ((currentStep === STEPS.CUT_INITIAL || currentStep === STEPS.CUT_FRESH) && heldTool === 'scalpel') {
+    if (heldTool === 'scalpel') {
       setStates({ isCutting: true });
       setTimeout(() => {
         setStates({ isCutting: false });
@@ -37,7 +37,7 @@ const RootSection = ({ position = [0, 1, 0] }) => {
         <meshStandardMaterial 
           color="#ffff00" 
           emissive="#ffff00" 
-          emissiveIntensity={(currentStep === STEPS.CUT_INITIAL || currentStep === STEPS.CUT_FRESH) ? 1 : 0.2} 
+          emissiveIntensity={heldTool === 'scalpel' ? 1 : 0.2} 
         />
       </mesh>
 

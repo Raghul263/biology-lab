@@ -1,10 +1,10 @@
 import React, { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
-  const { heldTool, setHeldTool, currentStep, showWrongAction } = useStore();
+  const { heldTool, setHeldTool } = useStore();
   const isHeld = heldTool === 'scalpel';
   const meshRef = useRef();
   const { raycaster } = useThree();
@@ -15,10 +15,12 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         meshRef.current.position.set(intersection.x, 0.952, intersection.z);
         meshRef.current.rotation.set(0, -Math.PI / 2, 0);
       }
-    } else if (!isHeld && meshRef.current) {
+    } else if (!isHeld && meshRef.current && initialPosition) {
       meshRef.current.position.set(initialPosition[0], initialPosition[1] + 0.005, initialPosition[2]);
       meshRef.current.rotation.set(0, Math.PI / 4, 0);
     }
@@ -26,15 +28,16 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
-    const canUse = currentStep === STEPS.CUT_DRY_ROOTS || currentStep === STEPS.CUT_FRESH_ROOTS;
-    if (canUse) {
-      setHeldTool(isHeld ? null : 'scalpel');
-    } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Follow the procedure.');
+    if (isHeld) {
+      const pos = meshRef.current.position;
+      useStore.getState().setSetupPosition('scalpel', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else {
+      if (!heldTool) setHeldTool('scalpel');
     }
   };
 
-  const showHighlight = !isHeld && (currentStep === STEPS.CUT_DRY_ROOTS || currentStep === STEPS.CUT_FRESH_ROOTS);
+  const showHighlight = !heldTool;
 
   const { handleShape, bladeShape, extrudeSettings } = useMemo(() => {
     const h = new THREE.Shape();
@@ -62,8 +65,8 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
   return (
     <group
       ref={meshRef}
-      onPointerDown={handleClick}
-      onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      onPointerDown={isHeld ? null : handleClick}
+      onPointerOver={() => { if (!isHeld) document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {showHighlight && (
@@ -96,6 +99,13 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
           </mesh>
         </group>
       </group>
+      {/* Expanded Grab Trigger (Invisible) - Centered on Handle Area */}
+      {!isHeld && (
+        <mesh visible={false} position={[0.07, 0, 0]}>
+          <boxGeometry args={[0.2, 0.05, 0.2]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      )}
     </group>
   );
 };

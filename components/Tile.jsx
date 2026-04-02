@@ -1,25 +1,51 @@
 import React from 'react';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import useStore from '../lib/store';
 
-const Tile = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, setStates, currentStep, showWrongAction } = useStore();
+const Tile = ({ position: initialPosition = [0, 0.93, 0.3] }) => {
+  const { heldTool, setHeldTool } = useStore();
+  const isHeld = heldTool === 'tile';
+  const groupRef = React.useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  const handleInteraction = (e) => {
+  useFrame(() => {
+    if (isHeld && groupRef.current) {
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        const x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        const z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(x, 0.93, z);
+        // Sync position to the store every frame while dragging
+        useStore.getState().setSetupPosition('tile', [x, 0.93, z]);
+      }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+      groupRef.current.position.set(...initialPosition);
+    }
+  });
+
+  const handleClick = (e) => {
     e.stopPropagation();
-    if (heldTool === 'onion' && currentStep === STEPS.CUT_DRY_ROOTS) {
-      setStates({ onionOnTile: true, onionOnBeaker: false, onionAtWatchGlass: false });
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('tile', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
     } else if (heldTool === 'onion') {
-      showWrongAction('Follow the procedure.');
-      setHeldTool(null);
+        const { setStates } = useStore.getState();
+        setStates({ onionPlacedOn: 'tile' });
+        setHeldTool(null);
+    } else if (!heldTool) {
+      setHeldTool('tile');
     }
   };
 
-  const showHighlight = heldTool === 'onion' && currentStep === STEPS.CUT_DRY_ROOTS;
+  const showHighlight = isHeld || !heldTool || heldTool === 'onion';
 
   return (
-    <group position={position} onClick={handleInteraction}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'copy'; }}
+    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
+      onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {showHighlight && (
@@ -35,7 +61,7 @@ const Tile = ({ position = [0, 0, 0] }) => {
         <meshStandardMaterial color="#34495e" roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, 0.05, 0]}>
-        <boxGeometry args={[0.6, 0.1, 0.6]} />
+        <boxGeometry args={[0.8, 0.1, 0.8]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>

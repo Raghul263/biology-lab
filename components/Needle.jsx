@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const Needle = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, currentStep, showWrongAction } = useStore();
+  const { heldTool, setHeldTool } = useStore();
   const meshRef = useRef();
   const isHeld = heldTool === 'needle';
   const { raycaster } = useThree();
@@ -15,27 +15,27 @@ const Needle = ({ position = [0, 0, 0] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         meshRef.current.position.set(intersection.x, 0.96, intersection.z);
       }
-    } else if (!isHeld && meshRef.current) {
+    } else if (!isHeld && meshRef.current && position) {
       meshRef.current.position.set(...position);
     }
   });
 
-  const handleClick = () => {
-    if (currentStep === STEPS.SLIDE_PREP) {
-      const { coverSlipPlaced } = useStore.getState();
-      if (coverSlipPlaced) {
-        setHeldTool(isHeld ? null : 'needle');
-      } else {
-        showWrongAction('Place the cover slip first.');
-      }
-    } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Follow the procedure.');
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (isHeld) {
+      const pos = meshRef.current.position;
+      useStore.getState().setSetupPosition('needle', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else {
+      if (!heldTool) setHeldTool('needle');
     }
   };
 
-  const showHighlight = !isHeld && currentStep === STEPS.SLIDE_PREP && useStore.getState().coverSlipPlaced;
+  const showHighlight = !heldTool;
 
   return (
     <group ref={meshRef} position={position}
@@ -63,7 +63,7 @@ const Needle = ({ position = [0, 0, 0] }) => {
         <meshStandardMaterial color="#cfd8dc" metalness={1} roughness={0.1} />
       </mesh>
       <mesh position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, 0.15, 8]} />
+        <cylinderGeometry args={[0.08, 0.08, 0.15, 12]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>

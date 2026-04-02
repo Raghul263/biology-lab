@@ -1,16 +1,43 @@
 import React from 'react';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import useStore from '../lib/store';
 
-const VibrantModernMicroscope = ({ position = [1.2, 0.93, 0] }) => {
-  const { toggleMicroscope, currentStep, slideOnMicroscope } = useStore();
+const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] }) => {
+  const { toggleMicroscope, slideOnMicroscope, heldTool, setHeldTool } = useStore();
+  const isHeld = heldTool === 'microscope';
+  const groupRef = React.useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  const showHighlight = currentStep === STEPS.MICROSCOPE;
+  useFrame(() => {
+    if (isHeld && groupRef.current) {
+        const intersection = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, intersection);
+        if (intersection) {
+            intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+            intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+            groupRef.current.position.set(intersection.x, 1.0, intersection.z);
+        }
+    } else if (!isHeld && groupRef.current) {
+        groupRef.current.position.set(...initialPosition);
+    }
+  });
 
-  const handleClick = () => {
-    if (currentStep === STEPS.MICROSCOPE && slideOnMicroscope) {
-      toggleMicroscope(true);
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (isHeld) {
+        const pos = groupRef.current.position;
+        useStore.getState().setSetupPosition('microscope', [pos.x, 1.0, pos.z]);
+        setHeldTool(null);
+    } else if (slideOnMicroscope && !heldTool) {
+        toggleMicroscope(true);
+    } else if (!heldTool) {
+        setHeldTool('microscope');
     }
   };
+
+  const showHighlight = slideOnMicroscope || isHeld;
 
   // Materials (Polished Silver & Black for a premium look)
   const polishedSilver = { color: "#bdc3c7", roughness: 0.25, metalness: 0.9 };
@@ -25,9 +52,9 @@ const VibrantModernMicroscope = ({ position = [1.2, 0.93, 0] }) => {
   };
 
   return (
-    <group position={position} rotation={[0, 0, 0]}
+    <group position={initialPosition} rotation={[0, 0, 0]}
       onClick={handleClick}
-      onPointerOver={() => { if (showHighlight && slideOnMicroscope) document.body.style.cursor = 'zoom-in'; }}
+      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'zoom-in'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {/* Step Highlight Ring */}

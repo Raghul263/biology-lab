@@ -4,19 +4,17 @@ import React, { Suspense, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 // UI Panels
 import HUD from './HUD';
 import LeftPanel from './LeftPanel';
-import BottomPanel from './BottomPanel';
 import MicroscopeUI from './MicroscopeUI';
 
 // 3D Components
 import LabRoom from './LabRoom';
 import Onion from './Onion';
 import WatchGlass from './WatchGlass';
-import RootTip from './RootTip';
 import Tile from './Tile';
 import Forceps from './Forceps';
 import Beaker from './Beaker';
@@ -91,7 +89,6 @@ function DropTarget() {
           
           store.setSetupPosition(id, [safeX, 0.93, safeZ]);
           store.setPlaced(id, true);
-          store.checkAllPlaced();
         } else {
           // Warning for imprecise placement
           store.showWrongAction("Please place the equipment securely on the table surface.");
@@ -111,7 +108,7 @@ function DropTarget() {
 }
 
 function Scene() {
-  const { microscopeZoomed, heldTool, placedComponents, currentStep, setupPositions } = useStore();
+  const { microscopeZoomed, heldTool, placedComponents, setupPositions } = useStore();
 
   const getPos = (id, fallback) => setupPositions[id] || fallback;
 
@@ -158,9 +155,6 @@ function Scene() {
           {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0.5, 0.93, 0.6])} />}
           {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [-0.6, 0.93, 0.6])} />}
           {placedComponents.microscope && <Microscope position={getPos('microscope', [0, 1.0, -0.7])} />}
-
-          {/* Root tip appears after fixation */}
-          {currentStep >= STEPS.PLACE_ON_SLIDE && <RootTip />}
         </group>
       </Suspense>
 
@@ -244,8 +238,6 @@ export default function Simulation() {
           {microscopeZoomed && <MicroscopeUI />}
         </div>
       </div>
-
-      <BottomPanel />
     </div>
   );
 }

@@ -1,9 +1,8 @@
 import React from 'react';
-import useStore, { STEP_INFO } from '../lib/store';
+import useStore from '../lib/store';
 
 const HUD = () => {
-  const { currentStep, heldTool, setHeldTool, setStates, wrongActionMessage } = useStore();
-  const info = STEP_INFO[currentStep] || { title: 'Biology Lab', instruction: 'Follow the laboratory procedure.' };
+  const { heldTool, setHeldTool, wrongActionMessage } = useStore();
 
   return (
     <>
@@ -22,22 +21,22 @@ const HUD = () => {
         boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         zIndex: 50,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             padding: '3px 10px', background: 'rgba(255,109,0,0.15)',
             border: '1px solid rgba(255,109,0,0.4)', borderRadius: '20px',
             fontSize: '10px', color: '#ff9800', fontWeight: 700, letterSpacing: '1px',
           }}>
-            🧪 EXPERIMENT
+            🧪 ONION ROOT TIP MITOSIS
           </div>
         </div>
 
-        <h3 style={{ margin: '0 0 8px 0', fontSize: '1rem', color: '#ff9800', fontWeight: 700 }}>
-          {info.title}
+        <h3 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: '#ff9800', fontWeight: 700 }}>
+          Free-Flow Simulator
         </h3>
         <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.9, lineHeight: 1.55 }}>
-          {info.instruction}
+          Experiment freely using the tools. Interactions are strictly physics-based.
         </p>
 
         {heldTool && (
@@ -50,12 +49,31 @@ const HUD = () => {
               fontWeight: 700, cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease',
             }}
           >
-            ↩ RETURN {heldTool.toUpperCase()}
+            ↩ DROP {heldTool.toUpperCase()}
           </button>
         )}
+
+        <button
+          onClick={() => {
+            if (window.confirm("Return all equipment to the instrument bench? (Current experiment progress will be kept)")) {
+              useStore.getState().resetAllComponents();
+            }
+          }}
+          style={{
+            marginTop: '10px', width: '100%', padding: '8px',
+            background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '10px',
+            fontWeight: 600, cursor: 'pointer', pointerEvents: 'auto', transition: 'all 0.2s ease',
+            textTransform: 'uppercase', letterSpacing: '1px'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+        >
+          🔄 RESET EQUIPMENT
+        </button>
       </div>
 
-      {/* Wrong Action Toast */}
+      {/* Action Toast */}
       {wrongActionMessage && (
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -66,7 +84,7 @@ const HUD = () => {
           animation: 'fadeInOut 2.5s ease-in-out',
           pointerEvents: 'none',
         }}>
-          ⚠️ {wrongActionMessage}
+          💡 {wrongActionMessage}
         </div>
       )}
 

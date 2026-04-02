@@ -1,12 +1,12 @@
 import React, { useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
-  const { currentStep, heated, rootOnSlide, setHeldTool, heldTool, showWrongAction } = useStore();
+  const { setHeldTool, heldTool } = useStore();
   const isHeld = heldTool === 'filterPaper';
-  const isTarget = currentStep === STEPS.SLIDE_PREP && heated && rootOnSlide && !useStore.getState().stainRemoved;
+  const isTarget = false;
 
   const heldRef = useRef();
   const { raycaster } = useThree();
@@ -17,18 +17,23 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         heldRef.current.position.set(intersection.x, 0.935, intersection.z);
       }
+    } else if (!isHeld && heldRef.current && initialPosition) {
+      heldRef.current.position.set(...initialPosition);
     }
   });
 
   const handleClick = (e) => {
     e.stopPropagation();
-    if (currentStep === STEPS.SLIDE_PREP) {
-      if (!isHeld) setHeldTool('filterPaper');
-      else setHeldTool(null);
-    } else if (currentStep !== STEPS.ARRANGE) {
-      showWrongAction('Follow the procedure.');
+    if (isHeld) {
+      const pos = heldRef.current ? heldRef.current.position : new THREE.Vector3(...initialPosition);
+      useStore.getState().setSetupPosition('filterPaper', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else {
+      if (!heldTool) setHeldTool('filterPaper');
     }
   };
 
@@ -37,7 +42,7 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
   return (
     <group>
       <group position={initialPosition} onClick={handleClick}
-        onPointerOver={() => { if (currentStep === STEPS.SLIDE_PREP) document.body.style.cursor = 'pointer'; }}
+        onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => (document.body.style.cursor = 'auto')}
       >
         {isTarget && !isHeld && (

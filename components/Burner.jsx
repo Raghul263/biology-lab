@@ -1,35 +1,32 @@
 import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
-import useStore, { STEPS } from '../lib/store';
+import { useThree, useFrame } from '@react-three/fiber';
+import useStore from '../lib/store';
 
-const Burner = ({ position = [0.7, 0.93, 0] }) => {
-  const { currentStep, heated, setStates, setStep, stainAdded, showWrongAction } = useStore();
+const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
+  const { heldTool, setStates, setHeldTool, slideHeatedTime } = useStore();
   const flameRef = useRef();
   const [flameOn, setFlameOn] = useState(false);
 
-  const isTarget = currentStep === STEPS.SLIDE_PREP && !heated && stainAdded;
-
-  const handleClick = (e) => {
-    e.stopPropagation();
-    if (!flameOn) {
-      showWrongAction('Turn on the burner first!');
-      return;
-    }
-    
-    if (isTarget) {
-      setStates({ heated: true });
-    } else if (currentStep === STEPS.SLIDE_PREP && heated) {
-      showWrongAction('Already heated. Proceed to blotting.');
-    }
-  };
-
-  const toggleFlame = (e) => {
-    e.stopPropagation();
-    setFlameOn(!flameOn);
-  };
+  const isHeld = heldTool === 'burner';
+  const groupRef = useRef();
+  const { raycaster } = useThree();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
   useFrame((state) => {
+    if (isHeld && groupRef.current) {
+      const { raycaster: r } = state;
+      const intersection = new THREE.Vector3();
+      r.ray.intersectPlane(plane, intersection);
+      if (intersection) {
+        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+        groupRef.current.position.set(intersection.x, 0.93, intersection.z);
+      }
+    } else if (!isHeld && groupRef.current && initialPosition) {
+      groupRef.current.position.set(...initialPosition);
+    }
+
     if (flameRef.current && flameOn) {
       const t = state.clock.elapsedTime;
       flameRef.current.rotation.z = Math.sin(t * 10) * 0.05 + Math.sin(t * 2.5) * 0.02;
@@ -47,15 +44,37 @@ const Burner = ({ position = [0.7, 0.93, 0] }) => {
     }
   });
 
+  const handleClick = (e) => {
+    e.stopPropagation();
+    if (isHeld) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('burner', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+    } else if (!heldTool) {
+      setHeldTool('burner');
+    } else if (heldTool === 'slide' && flameOn) {
+       setStates({ 
+          slideHeatedTime: (slideHeatedTime || 0) + 1,
+          heated: true 
+       });
+    }
+  };
+
+  const toggleFlame = (e) => {
+    e.stopPropagation();
+    setFlameOn(!flameOn);
+  };
+
   const redMat = { color: "#d32f2f", roughness: 0.3, metalness: 0.7 };
   const chromeMat = { color: "#eceff1", roughness: 0.15, metalness: 0.9 };
+  const showHighlight = isHeld || !heldTool || heldTool === 'slide';
 
   return (
-    <group position={position} onClick={handleClick}
-      onPointerOver={() => { if (isTarget && flameOn) document.body.style.cursor = 'pointer'; }}
+    <group ref={groupRef} position={initialPosition} onClick={handleClick}
+      onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {isTarget && flameOn && (
+      {heldTool === 'slide' && flameOn && (
         <group position={[0, 0.25, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.08, 0.005, 16, 32]} />

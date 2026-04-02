@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-
+import useStore from '../lib/store';
 import SpecimenJar from './SpecimenJar';
 
 // Helper for Framed Bio Posters
@@ -19,6 +19,7 @@ const BioPoster = ({ position, rotation, texture, scale = [1.2, 1.6] }) => (
 );
 
 const LabRoom = () => {
+  const { heldTool, setHeldTool, setSetupPosition } = useStore();
   // Use try-catch or ensure these files exist
   const textures = useTexture({
     chalkboard: '/biology_chalkboard_final.png',
@@ -143,7 +144,65 @@ const LabRoom = () => {
       {/* 6. Furniture: Lab Bench */}
       <group position={[0, 0, 0]}>
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow><boxGeometry args={[4.0, 0.8, 1.6]} /><meshStandardMaterial color={woodColor} /></mesh>
-        <mesh position={[0, 0.85, 0]} castShadow receiveShadow><boxGeometry args={[4.4, 0.1, 1.8]} /><meshStandardMaterial color={woodColor} /></mesh>
+        <mesh 
+          position={[0, 0.85, 0]} 
+          castShadow receiveShadow
+          onPointerDown={(e) => {
+            if (heldTool) {
+              e.stopPropagation();
+              // Check if it's one of our repositionable items
+              const repositionables = [
+                'waterBeaker', 'hclBeaker', 'stainBeaker', 'onion', 'tile', 
+                'scalpel', 'forceps', 'needle', 'watchGlass', 'vial', 
+                'dropper', 'burner', 'slide', 'coverSlip', 'filterPaper', 'microscope'
+              ];
+              
+              if (repositionables.includes(heldTool)) {
+                // Determine the intersection point on the table surface
+                const point = e.point;
+                const store = useStore.getState();
+                const setupPositions = store.setupPositions;
+                
+                // --- SPECIALIZED SNAPPING FOR ONION ---
+                if (heldTool === 'onion') {
+                    const tilePos = setupPositions['tile'] || [0, 0.93, 0.3];
+                    const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
+                    const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
+
+                    if (Math.abs(point.x - tilePos[0]) < 0.45 && Math.abs(point.z - tilePos[2]) < 0.45) {
+                        store.setStates({ onionPlacedOn: 'tile' });
+                        store.showWrongAction("Onion fixed to Cutting Tile");
+                        setHeldTool(null);
+                        return;
+                    } else if (Math.abs(point.x - beakerPos[0]) < 0.3 && Math.abs(point.z - beakerPos[2]) < 0.3) {
+                        store.setStates({ onionPlacedOn: 'waterBeaker' });
+                        store.showWrongAction("Onion placed in Water Beaker");
+                        setHeldTool(null);
+                        return;
+                    } else if (Math.abs(point.x - wgPos[0]) < 0.3 && Math.abs(point.z - wgPos[2]) < 0.3) {
+                        store.setStates({ onionPlacedOn: 'watchGlass' });
+                        store.showWrongAction("Onion placed on Watch Glass");
+                        setHeldTool(null);
+                        return;
+                    } else {
+                       store.setStates({ onionPlacedOn: null });
+                    }
+                }
+
+                // Clamp within safe table bounds
+                const safeX = Math.max(-2.1, Math.min(2.1, point.x));
+                const safeZ = Math.max(-0.8, Math.min(0.8, point.z));
+                const y = heldTool === 'microscope' ? 1.0 : 0.93;
+                
+                setSetupPosition(heldTool, [safeX, y, safeZ]);
+                setHeldTool(null);
+              }
+            }
+          }}
+        >
+          <boxGeometry args={[4.4, 0.1, 1.8]} />
+          <meshStandardMaterial color={woodColor} />
+        </mesh>
         <group position={[1.7, 0, -0.4]}>
           <mesh position={[0, 0.35, 0]} castShadow><cylinderGeometry args={[0.15, 0.15, 0.7, 16]} /><meshStandardMaterial color="#d32f2f" metalness={0.6} /></mesh>
           <mesh position={[0, 0.7, 0]}><sphereGeometry args={[0.15, 16, 16, 0, Math.PI*2, 0, Math.PI/2]} /><meshStandardMaterial color="#d32f2f" /></mesh>

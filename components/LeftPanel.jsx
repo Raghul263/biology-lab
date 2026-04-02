@@ -1,5 +1,5 @@
 import React from 'react';
-import useStore, { STEPS } from '../lib/store';
+import useStore from '../lib/store';
 
 const instruments = [
   { id: 'waterBeaker', icon: '🧪', name: 'Water Beaker', desc: 'For root growth' },
@@ -21,30 +21,19 @@ const instruments = [
 ];
 
 const LeftPanel = () => {
-  const { currentStep, placedComponents, setPlaced, setHeldTool, heldTool, checkAllPlaced, showWrongAction } = useStore();
+  const { placedComponents, setPlaced, setHeldTool, heldTool } = useStore();
 
   const handleInteract = (inst) => {
-    if (currentStep === STEPS.ARRANGE) {
-      if (placedComponents[inst.id]) return;
+    if (!placedComponents[inst.id]) {
       setPlaced(inst.id, true);
-      checkAllPlaced();
+      setHeldTool(inst.id); // Add this so it immediately follows the cursor
     } else {
-      // Only allow picking tools that are relevant to the current step
-      const toolSteps = {
-        scalpel: [STEPS.CUT_DRY_ROOTS, STEPS.CUT_FRESH_ROOTS],
-        forceps: [STEPS.FIXATION, STEPS.PLACE_ON_SLIDE],
-        dropper: [STEPS.CHEMICAL_TREAT, STEPS.SLIDE_PREP],
-        filterPaper: [STEPS.SLIDE_PREP],
-        needle: [STEPS.SLIDE_PREP],
-      };
-      const allowed = toolSteps[inst.id];
-      if (allowed && allowed.includes(currentStep)) {
-        setHeldTool(heldTool === inst.id ? null : inst.id);
-      } else if (allowed) {
-        showWrongAction('Follow the procedure.');
-      }
+      // It's placed, so we can pick it up to reposition it on the table
+      setHeldTool(heldTool === inst.id ? null : inst.id);
     }
   };
+
+  const allPlaced = Object.values(placedComponents).every(v => v);
 
   return (
     <div style={{
@@ -58,10 +47,10 @@ const LeftPanel = () => {
         background: 'rgba(255,109,0,0.15)', flexShrink: 0,
       }}>
         <div style={{ fontSize: '9px', letterSpacing: '3px', color: '#ff9800', marginBottom: '4px', fontWeight: 600 }}>
-          {currentStep === STEPS.ARRANGE ? 'INITIAL SETUP' : 'EQUIPMENT'}
+          {!allPlaced ? 'INITIAL SETUP' : 'EQUIPMENT'}
         </div>
         <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>
-          {currentStep === STEPS.ARRANGE ? '📦 Unpack Supplies' : '🧫 Instrument Bench'}
+          {!allPlaced ? '📦 Unpack Supplies' : '🧫 Instrument Bench'}
         </div>
       </div>
 
@@ -71,14 +60,14 @@ const LeftPanel = () => {
         padding: '12px',
         scrollbarWidth: 'thin', 
         scrollbarColor: 'rgba(255,109,0,0.5) transparent',
-        display: currentStep === STEPS.ARRANGE ? 'grid' : 'block',
-        gridTemplateColumns: currentStep === STEPS.ARRANGE ? '1fr 1fr' : 'none',
+        display: !allPlaced ? 'grid' : 'block',
+        gridTemplateColumns: !allPlaced ? '1fr 1fr' : 'none',
         gap: '8px',
       }}>
         {instruments.map((inst) => {
           const isPlaced = placedComponents[inst.id];
           const isSelected = heldTool === inst.id;
-          const isArrangeStep = currentStep === STEPS.ARRANGE;
+          const isArrangeStep = !allPlaced;
 
           return (
             <div
@@ -91,7 +80,6 @@ const LeftPanel = () => {
                 marginBottom: isArrangeStep ? '0' : '10px',
                 cursor: 'pointer', transition: 'all 0.2s ease',
                 opacity: (isArrangeStep && isPlaced) ? 0.3 : 1,
-                pointerEvents: (isArrangeStep && isPlaced) ? 'none' : 'auto',
                 display: 'flex',
                 flexDirection: isArrangeStep ? 'column' : 'row',
                 alignItems: 'center',
@@ -99,12 +87,12 @@ const LeftPanel = () => {
                 gap: isArrangeStep ? '6px' : '12px',
                 position: 'relative',
               }}
-              draggable={isArrangeStep && !isPlaced}
+              onClick={() => handleInteract(inst)}
+              draggable={!isPlaced}
               onDragStart={(e) => {
                 e.dataTransfer.setData('inst_id', inst.id);
                 e.dataTransfer.effectAllowed = 'copy';
               }}
-              onClick={() => handleInteract(inst)}
             >
               <span style={{ fontSize: isArrangeStep ? '22px' : '24px' }}>{inst.icon}</span>
               <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
@@ -141,7 +129,7 @@ const LeftPanel = () => {
         padding: '16px', background: 'rgba(0,0,0,0.2)',
         fontSize: '11px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', lineHeight: 1.4,
       }}>
-        {currentStep === STEPS.ARRANGE
+        {!allPlaced
           ? "Click items to place them on the lab table."
           : "Select a tool to use in the experiment."}
       </div>
