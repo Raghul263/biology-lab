@@ -43,7 +43,7 @@ const CellTile = ({ phase, isSelected, onClick, focus, scale }) => {
 };
 
 const MicroscopeUI = () => {
-  const { toggleMicroscope, squashed, rootProcessingState, rootOnSlide, slideFluids } = useStore();
+  const { toggleMicroscope, squashed, rootProcessingState, rootOnSlide, slideFluids, slideOnMicroscope } = useStore();
   const [focus, setFocus] = useState(0.5);
   const [light, setLight] = useState(0.8);
   const [objectivePower, setObjectivePower] = useState(4);
@@ -150,9 +150,33 @@ const MicroscopeUI = () => {
         </div>
       </div>
 
-      <button onClick={() => toggleMicroscope(false)}
-        style={{ position: 'absolute', top: '30px', right: '30px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', width: '40px', height: '40px', borderRadius: '50%', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >✕</button>
+      <div style={{ position: 'absolute', top: '30px', right: '30px', display: 'flex', gap: '15px' }}>
+        {slideOnMicroscope && (
+          <button
+            onClick={() => {
+              const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
+              useStore.getState().setSetupPosition('slide', [microPos[0] + 0.35, 0.93, microPos[2]]);
+              useStore.getState().setStates({ slideOnMicroscope: false });
+              toggleMicroscope(false);
+            }}
+            style={{
+              padding: '0 20px', height: '40px', borderRadius: '20px',
+              background: 'rgba(244, 67, 54, 0.15)', border: '1px solid rgba(244, 67, 54, 0.4)',
+              color: '#ff5252', fontSize: '11px', fontWeight: 700, letterSpacing: '1px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+              transition: 'all 0.2s', textTransform: 'uppercase'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(244, 67, 54, 0.25)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(244, 67, 54, 0.15)'; }}
+          >
+            <span style={{ fontSize: '16px' }}>⏏</span> REMOVE SLIDE
+          </button>
+        )}
+
+        <button onClick={() => toggleMicroscope(false)}
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', width: '40px', height: '40px', borderRadius: '50%', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >✕</button>
+      </div>
 
       {/* 🔴 CIRCULAR FIELD OF VIEW */}
       <div style={{ position: 'relative' }}>

@@ -118,8 +118,13 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
   const handleInteraction = (e) => {
     e.stopPropagation();
     
+    // DETACH LOGIC: If already on microscope and clicked, take it off
     if (slideOnMicroscope) {
-      return; 
+        const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
+        // Place it slightly to the side on the table
+        setStates({ slideOnMicroscope: false });
+        useStore.getState().setSetupPosition('slide', [microPos[0] + 0.3, 0.93, microPos[2]]);
+        return; 
     }
     
     if (isHeld) {

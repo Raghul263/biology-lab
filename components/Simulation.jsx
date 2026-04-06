@@ -151,7 +151,7 @@ function Scene() {
           {placedComponents.vial && <FixativeVial position={getPos('vial', [-0.8, 0.93, 0.4])} />}
           {placedComponents.dropper && <Dropper position={getPos('dropper', [-1.3, 0.93, 0.5])} />}
           {placedComponents.burner && <Burner position={getPos('burner', [1.4, 0.93, 0.3])} />}
-          {placedComponents.slide && !useStore.getState().slideOnMicroscope && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
+          {placedComponents.slide && !slideOnMicroscope && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
           {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0.5, 0.93, 0.6])} />}
           {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [-0.6, 0.93, 0.6])} />}
           {placedComponents.microscope && <Microscope position={getPos('microscope', [0, 1.0, -0.7])} />}

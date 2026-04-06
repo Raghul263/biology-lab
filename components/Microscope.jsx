@@ -2,6 +2,7 @@ import React from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import useStore from '../lib/store';
+import { useComponentInteraction } from '../lib/useComponentInteraction';
 import Slide from './Slide';
 
 const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] }) => {
@@ -13,6 +14,17 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
   const rightClipRef = React.useRef();
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
+
+  const lastHeldRef = React.useRef(isHeld);
+  
+  React.useEffect(() => {
+    // If it was held and is now released (e.g. via HUD button)
+    if (lastHeldRef.current && !isHeld && groupRef.current) {
+        const pos = groupRef.current.position;
+        useStore.getState().setSetupPosition('microscope', [pos.x, 1.0, pos.z]);
+    }
+    lastHeldRef.current = isHeld;
+  }, [isHeld]);
 
   useFrame((state, delta) => {
     if (isHeld && groupRef.current) {
@@ -42,25 +54,24 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
     }
   });
 
-  const handlePickup = (e) => {
-    e.stopPropagation();
-    if (isHeld && groupRef.current) {
+  const { onPointerDown, onContextMenu, isLocked } = useComponentInteraction('microscope', isHeld, {
+    onDrop: () => {
+      if (groupRef.current) {
         const pos = groupRef.current.position;
         useStore.getState().setSetupPosition('microscope', [pos.x, 1.0, pos.z]);
-        setHeldTool(null);
-    } else if (!heldTool) {
-        setHeldTool('microscope');
+      }
+      setHeldTool(null);
     }
-  };
+  });
 
   const handleZoom = (e) => {
     e.stopPropagation();
-    if (!heldTool) {
+    if (!heldTool || heldTool === 'microscope') {
       toggleMicroscope(true);
     }
   };
 
-  const showHighlight = isHeld;
+  const showHighlight = isHeld || isLocked;
 
   // Materials (Polished Silver & Black for a premium look)
   const polishedSilver = { color: "#bdc3c7", roughness: 0.25, metalness: 0.9 };
@@ -76,21 +87,21 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
 
   return (
     <group ref={groupRef} position={initialPosition} rotation={[0, 0, 0]}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = 'zoom-in'; }}
+      onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'grab'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {/* Step Highlight Ring */}
+      {/* Step Highlight Ring (Cyan for held, Gold for locked) */}
       {showHighlight && (
         <group position={[0, 0.25, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.22, 0.008, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
+            <meshBasicMaterial color={isLocked ? "#ffc107" : "#00e5ff"} transparent opacity={0.6} />
           </mesh>
         </group>
       )}
 
       {/* ─── PROFESSIONAL BASE ─── */}
-      <group position={[0, 0.03, 0]} onClick={handlePickup}>
+      <group position={[0, 0.03, 0]} onPointerDown={onPointerDown} onContextMenu={onContextMenu}>
         {/* Main Base Plate (Indigo/Blue Body) */}
         <mesh castShadow receiveShadow>
           <boxGeometry args={[0.34, 0.08, 0.44]} />
@@ -130,7 +141,7 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
       </group>
 
       {/* ─── PROFESSIONAL CHROME SILVER CURVED ARM ─── */}
-      <group position={[0, 0.25, -0.16]} onClick={handlePickup}>
+      <group position={[0, 0.25, -0.16]} onPointerDown={onPointerDown} onContextMenu={onContextMenu}>
         {/* Main Vertical Support (Silver) */}
         <mesh castShadow position={[0, 0.05, 0]}>
           <boxGeometry args={[0.1, 0.5, 0.1]} />
@@ -160,7 +171,7 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
       </group>
 
       {/* ─── MECHANICAL STAGE ─── */}
-      <group position={[0, 0.22, 0.05]} onClick={handlePickup}>
+      <group position={[0, 0.22, 0.05]} onPointerDown={onPointerDown} onContextMenu={onContextMenu}>
         {/* Main Black Stage Body */}
         <mesh castShadow receiveShadow>
           <boxGeometry args={[0.26, 0.02, 0.26]} />
