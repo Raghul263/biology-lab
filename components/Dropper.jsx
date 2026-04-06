@@ -1,55 +1,115 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import useStore from '../lib/store';
 
 const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
-  const { heldTool, setHeldTool, dropperContents } = useStore();
+  const { heldTool, setHeldTool, dropperState, dropCount, setStates, hclApplied, stainApplied } = useStore();
   const isHeld = heldTool === 'dropper';
   const meshRef = useRef();
-  const { raycaster } = useThree();
+  const [snappedTo, setSnappedTo] = useState(null); // null, 'hclBeaker', 'stainBeaker', 'slide'
+  const [isDipped, setIsDipped] = useState(false); // DIPPED = Inside liquid | !DIPPED = At rim
+  const [suctionTime, setSuctionTime] = useState(0); // 0 to 1 for animation
+  const [unlockTime, setUnlockTime] = useState(0); // Cooldown to prevent instant re-snap
+  const { raycaster, mouse, camera } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
-  useFrame(() => {
+  useFrame((state, delta) => {
+    if (suctionTime > 0) {
+        setSuctionTime(prev => Math.max(0, prev - delta * 2.5));
+    }
+    if (unlockTime > 0) {
+        setUnlockTime(prev => Math.max(0, prev - delta));
+    }
+
     if (isHeld && meshRef.current) {
+      const { setupPositions, hoveredComponent } = useStore.getState();
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
-      if (intersection) {
-        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
-        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
-        meshRef.current.position.set(intersection.x, 1.1, intersection.z); // Elevated for clearance
+
+      // --- 🧠 AUTOMATIC RIM SNAP (ONLY TO RIM) ---
+      if (!snappedTo && hoveredComponent && ['hclBeaker', 'stainBeaker', 'slide'].includes(hoveredComponent)) {
+         if (unlockTime <= 0) {
+            setSnappedTo(hoveredComponent);
+            setIsDipped(false);
+         }
       }
-    } else if (!isHeld && meshRef.current && initialPosition) {
-      meshRef.current.position.set(...initialPosition);
+
+      if (snappedTo) {
+        let targetPos = [0, 0, 0];
+        if (snappedTo === 'hclBeaker') targetPos = setupPositions['hclBeaker'] || [-1.5, 0.93, -0.3];
+        if (snappedTo === 'stainBeaker') targetPos = setupPositions['stainBeaker'] || [-1.1, 0.93, -0.3];
+        if (snappedTo === 'slide') targetPos = setupPositions['slide'] || [0, 0.93, 0.2];
+        
+        // --- 🧪 TWO-STAGE HEIGHT LOGIC (Rim: 0.28, Dipped: 0.08) ---
+        // Base Rim Height
+        let baseHeight = (snappedTo === 'slide' ? 0.16 : 0.28); 
+        
+        // 🧠 DIP-AND-RETURN ANIMATION: Dip into beaker when suction is active, then return
+        let dipOffset = 0;
+        if (suctionTime > 0 && (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
+            // Dip down into acid (0.08) and back up using suctionTime curve
+            const curve = Math.sin(suctionTime * Math.PI); 
+            dipOffset = curve * -0.20; // 0.28 -> 0.08 -> 0.28
+        }
+        
+        // Final position
+        const yOffset = baseHeight + dipOffset;
+        meshRef.current.position.set(targetPos[0], 0.93 + yOffset, targetPos[2]);
+      } else {
+        if (intersection) {
+          intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
+          intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
+          meshRef.current.position.set(intersection.x, 1.12, intersection.z);
+        }
+      }
+    } else if (!isHeld && meshRef.current) {
+      const { setupPositions } = useStore.getState();
+      const pos = setupPositions['dropper'] || initialPosition;
+      meshRef.current.position.set(...pos);
     }
   });
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
+    
     if (isHeld) {
-      // 🧪 INTERACTIVE DROPPER: Check if near a target that can receive drops
-      const { setupPositions, setStates, watchGlassFluid, slideFluids } = useStore.getState();
+      // 🧠 MULTI-STAGE CLICK TO FIX
+      if (snappedTo) {
+         if (!isDipped && (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
+            // First Click -> DIP into liquid (FIX INSIDE)
+            setIsDipped(true);
+         } else {
+            // Second Click (or click on slide) -> UNLOCK (UNSNAP)
+            setSnappedTo(null);
+            setIsDipped(false);
+            setUnlockTime(1.5);
+         }
+         return;
+      }
+
+      const { setupPositions, hoveredComponent } = useStore.getState();
       const pos = meshRef.current.position;
       
-      const wgPos = setupPositions['watchGlass'] || [0.35, 0.93, -0.2];
-      const distToWg = Math.hypot(pos.x - wgPos[0], pos.z - wgPos[2]);
-      
-      const slidePos = setupPositions['slide'] || [0.5, 0.93, 0.3];
-      const distToSlide = Math.hypot(pos.x - slidePos[0], pos.z - slidePos[2]);
+      const checkDist = (targetKey, defaultPos) => {
+          const t = setupPositions[targetKey] || defaultPos;
+          return Math.pow(pos.x - t[0], 2) + Math.pow(pos.z - t[2], 2) < 0.18;
+      };
 
-      if (distToWg < 0.25 && dropperContents) {
-        // Drop on Watch Glass
-        setStates({ watchGlassFluid: dropperContents, dropperContents: null });
-        useStore.getState().showWrongAction(`Dropped ${dropperContents} in Watch Glass.`);
-      } else if (distToSlide < 0.2 && dropperContents) {
-        // Drop on Slide
-        setStates({ 
-          slideFluids: [...(slideFluids || []), dropperContents],
-          dropperContents: null 
-        });
-        useStore.getState().showWrongAction(`Dropped ${dropperContents} on Slide.`);
+      if (hoveredComponent === 'hclBeaker' || checkDist('hclBeaker', [-1.5, 0.93, -0.3])) {
+        setSnappedTo('hclBeaker');
+        setIsDipped(false);
+      } else if (hoveredComponent === 'stainBeaker' || checkDist('stainBeaker', [-1.1, 0.93, -0.3])) {
+        setSnappedTo('stainBeaker');
+        setIsDipped(false);
+      } else if (hoveredComponent === 'slide' || checkDist('slide', [0, 0.93, 0.2])) {
+        setSnappedTo('slide');
+        setIsDipped(false);
+      } else if (Math.pow(pos.x - initialPosition[0], 2) + Math.pow(pos.z - initialPosition[2], 2) < 0.1) {
+        useStore.getState().setSetupPosition('dropper', initialPosition);
+        setStates({ dropperState: null, dropCount: 0 });
+        setHeldTool(null);
       } else {
-        // Not near anything, just drop the tool back on the stand
         useStore.getState().setSetupPosition('dropper', [pos.x, 0.93, pos.z]);
         setHeldTool(null);
       }
@@ -58,83 +118,119 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
     }
   };
 
-  const liquidColor = dropperContents === 'HCL' ? '#4fc3f7' :
-                      dropperContents === 'STAIN' ? '#e91e63' :
-                      dropperContents === 'WATER' ? '#81d4fa' : null;
+  const handleHeadClick = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!isHeld) return;
+
+    // 🧠 REAL-TIME SYSTEM (Fill 3 drops | Drain 1 drop)
+    if (isDipped || (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
+        // FILLING FROM BEAKER (Auto-dip if clicked at rim)
+        if (snappedTo === 'hclBeaker') setStates({ dropperState: 'HCL_LOADED', dropCount: 3 });
+        if (snappedTo === 'stainBeaker') setStates({ dropperState: 'STAIN_LOADED', dropCount: 3 });
+        setSuctionTime(1.0);
+        setIsDipped(true); 
+        return;
+    }
+
+    if (dropperState) {
+        // DRAINING (1 drop at a time)
+        const nextCount = dropCount - 1;
+        setSuctionTime(1.0); // Trigger drain animation
+
+        if (snappedTo === 'slide') {
+            if (dropperState === 'HCL_LOADED') setStates({ hclApplied: true, dropCount: nextCount });
+            if (dropperState === 'STAIN_LOADED') setStates({ stainApplied: true, dropCount: nextCount });
+        } else {
+            setStates({ dropCount: nextCount });
+        }
+
+        if (nextCount <= 0) {
+            setStates({ dropperState: null, dropCount: 0 });
+            setIsDipped(false);
+        }
+    }
+  };
+
+  const liquidColor = dropperState === 'HCL_LOADED' ? '#4fc3f7' :
+                      dropperState === 'STAIN_LOADED' ? '#e91e63' : null;
+
+  // Visual mapping: dropCount (3/3 is max height)
+  const liquidLevel = (dropCount / 3) * 0.08;
 
   const showHighlight = !isHeld && !heldTool;
+  const homePos = initialPosition;
 
   return (
     <group>
-      {/* 1. THE STAND (Stays on the table) */}
-      <group position={initialPosition}>
-        {/* Stand Base */}
-        <mesh receiveShadow castShadow position={[0, -0.01, 0]}>
-          <cylinderGeometry args={[0.04, 0.05, 0.06, 16]} />
-          <meshStandardMaterial color="#455a64" metalness={0.6} roughness={0.2} />
-        </mesh>
-        {/* Inner Hole (Visual Only) */}
-        <mesh position={[0, 0.021, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.015, 16]} />
-          <meshBasicMaterial color="#111" />
-        </mesh>
-        {/* Support Neck */}
-        <mesh position={[0, 0.01, 0]}>
-          <cylinderGeometry args={[0.042, 0.042, 0.02, 16]} />
-          <meshStandardMaterial color="#cfd8dc" metalness={0.8} />
-        </mesh>
-      </group>
+      <group position={homePos} onPointerDown={handleClick} />
 
-      {/* 2. THE DROPPER (Moves and Rotates) */}
       <group ref={meshRef} onPointerDown={handleClick}
-        onPointerOver={() => { if (!isHeld) document.body.style.cursor = 'pointer'; }}
-        onPointerOut={() => (document.body.style.cursor = 'auto')}
+        onPointerOver={() => { 
+            if (!heldTool) document.body.style.cursor = 'pointer'; 
+            setStates({ hoveredComponent: 'dropper' });
+        }}
+        onPointerOut={() => {
+            document.body.style.cursor = 'auto';
+            setStates({ hoveredComponent: null });
+        }}
       >
-        {/* 🔴 INTERACTION ZONE: While held, this captures the user's "Fix" click at the bulb area */}
-        {isHeld && (
-          <mesh 
-            position={[0, 0.26, 0]} 
-            onPointerDown={handleClick}
-            onPointerOver={() => { document.body.style.cursor = 'cell'; }}
-          >
-            <boxGeometry args={[0.2, 0.1, 0.1]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-          </mesh>
-        )}
-
         {showHighlight && (
           <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.08, 0.005, 16, 32]} />
+            <torusGeometry args={[0.06, 0.005, 16, 32]} />
             <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
           </mesh>
         )}
 
-        {/* Straight Dropper (Always Upright as requested) */}
-        <group rotation={[0, 0, 0]} position={isHeld ? [0, -0.15, 0] : [0, 0, 0]}>
+        <group 
+          rotation={isHeld ? [0, 0, 0] : [Math.PI / 2, 0, Math.PI]} 
+          position={[0, isHeld ? -0.08 : 0.02, 0]}
+        >
           {/* Bulb */}
-          <mesh castShadow position={[0, 0.26, 0]}>
-            <sphereGeometry args={[0.038, 32, 32]} />
-            <meshPhysicalMaterial color="#660000" roughness={0.9} emissive="#220000" emissiveIntensity={0.1} />
+          <mesh castShadow position={[0, 0.2, 0]} scale={suctionTime > 0 ? [0.95, 0.9, 0.95] : [1, 1, 1]}>
+            <sphereGeometry args={[0.026, 32, 32]} />
+            <meshPhysicalMaterial 
+                color={(isHeld && snappedTo) ? (suctionTime > 0 ? "#880e4f" : "#ff1744") : "#b71c1c"} 
+                roughness={0.8} 
+            />
           </mesh>
           {/* Collar */}
-          <mesh position={[0, 0.22, 0]}>
-            <cylinderGeometry args={[0.015, 0.015, 0.02, 16]} />
-            <meshPhysicalMaterial color="#333" metalness={0.8} roughness={0.2} />
+          <mesh position={[0, 0.17, 0]} onPointerDown={(e) => { e.stopPropagation(); handleClick(); }}>
+            <cylinderGeometry args={[0.012, 0.012, 0.015, 16]} />
+            <meshPhysicalMaterial color="#333" metalness={0.9} />
           </mesh>
-          {/* Tube */}
-          <mesh castShadow receiveShadow position={[0, 0.05, 0]}>
-            <cylinderGeometry args={[0.012, 0.004, 0.35, 16]} />
-            <meshPhysicalMaterial transparent opacity={1} transmission={0.98}
-              thickness={0.005} ior={1.5} roughness={0.01} color="#ffffff" clearcoat={1} />
+          {/* Glass Tube */}
+          <mesh castShadow receiveShadow position={[0, 0.045, 0]} onPointerDown={(e) => { e.stopPropagation(); handleClick(); }}>
+            <cylinderGeometry args={[0.007, 0.002, 0.24, 16]} />
+            <meshPhysicalMaterial transparent opacity={0.4} transmission={1.0} thickness={0.05} color="#ffffff" ior={1.52} />
           </mesh>
-          {/* Liquid inside dropper */}
-          {liquidColor && (
-            <mesh position={[0, -0.05, 0]}>
-              <cylinderGeometry args={[0.008, 0.004, 0.1, 16]} />
-              <meshStandardMaterial color={liquidColor} transparent opacity={0.8} />
+          {/* 💧 REALISTIC LIQUID (MAPPED TO dropCount) */}
+          {liquidColor && dropCount > 0 && (
+            <mesh 
+                position={[0, -0.085 + (liquidLevel / 2), 0]}
+                scale={[1, dropCount / 3, 1]}
+            >
+              <cylinderGeometry args={[0.005, 0.002, 0.08, 16]} />
+              <meshStandardMaterial color={liquidColor} transparent opacity={0.8} emissive={liquidColor} emissiveIntensity={0.2} />
             </mesh>
           )}
         </group>
+
+        {/* 🔴 TOP INTERACTION ZONE */}
+        <mesh 
+          position={[0, 0.185, 0]} 
+          onPointerDown={handleHeadClick}
+          onPointerOver={(e) => { if (isHeld) { e.stopPropagation(); document.body.style.cursor = 'crosshair'; } }}
+        >
+          <cylinderGeometry args={[0.08, 0.08, 0.15, 16]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+
+        {!isHeld && (
+          <mesh onPointerDown={handleClick}>
+            <boxGeometry args={[0.2, 0.05, 0.4]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+        )}
       </group>
     </group>
   );

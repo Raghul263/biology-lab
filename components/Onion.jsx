@@ -264,7 +264,18 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
              setStates({ onionRootsState: 'CUT_DRY', isCutting: false, cutStartTime: 0 });
              showWrongAction('Dry roots cut on tile.');
           } else {
-             setStates({ isCutting: false, cutStartTime: 0 });
+             // 🪵 CUT ON TABLE (FREE FLOW)
+             if (onionRootsState === 'GROWN') {
+                setStates({ 
+                    onionRootsState: 'CUT_FRESH', 
+                    watchGlassRootCount: 8, // Support picking up from "virtual" pile on table
+                    isCutting: false, 
+                    cutStartTime: 0 
+                });
+                showWrongAction('Roots cut on table.');
+             } else {
+                setStates({ isCutting: false, cutStartTime: 0 });
+             }
           }
        }
     }
@@ -350,7 +361,7 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
       } else if (heldTool === 'forceps') {
         if (onionPlacedOn === 'tile' || onionPlacedOn === 'watchGlass') {
           if (!rootsRemovedFromOnion) {
-            setStates({ rootsInForceps: true, rootsRemovedFromOnion: true });
+            setStates({ holdingRoot: true, rootsRemovedFromOnion: true });
           }
         }
       }
@@ -409,13 +420,6 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
           </mesh>
         )}
         
-        {/* Interaction Highlight for Scalpel */}
-        {heldTool === 'scalpel' && !isCut && onionPlacedOn === 'tile' && (
-          <mesh position={[-0.1, 0, 0]} rotation={[0, 0, 0]}>
-            <torusGeometry args={[0.06, 0.002, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6 + Math.sin(Date.now() * 0.005) * 0.3} />
-          </mesh>
-        )}
         <group position={[0, -0.0955, 0]}>
         <OnionShell scale={0.45} />
         

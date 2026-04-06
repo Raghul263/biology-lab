@@ -18,24 +18,37 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
         intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
         intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         
-        // Default floating position (Elevated above roots and vial)
         meshRef.current.position.set(intersection.x, 1.1, intersection.z);
         
-        // Slicing Animation Hijack (High-Fidelity Downward Chop)
         const { isCutting, cutStartTime } = useStore.getState();
         if (isCutting && cutStartTime) {
-          const t = (Date.now() - cutStartTime) / 400; // 0.4s slice
+          const t = (Date.now() - cutStartTime) / 400;
           if (t >= 0 && t <= 1) {
-             const dip = Math.sin(t * Math.PI) * 0.15; // Deeper downward dip
+             const dip = Math.sin(t * Math.PI) * 0.15;
              const swipe = (t - 0.5) * 0.12; 
              meshRef.current.position.y -= dip;
              meshRef.current.position.x += swipe;
-             // Tilt TIP sharply down during cut
              meshRef.current.rotation.set(0, -Math.PI / 2, -Math.PI / 3);
           }
         } else {
-           // Default Held Angle (Steep surgical angle from above)
-           meshRef.current.rotation.set(0, -Math.PI / 2, -Math.PI / 4);
+            meshRef.current.rotation.set(0, -Math.PI / 2, -Math.PI / 4);
+            
+            // 🧠 REAL-TIME DISTANCE TRACKING for visual feedback
+            const { onionPlacedOn, setupPositions, setStates } = useStore.getState();
+            const pTable = setupPositions['onion'] || [-0.35, 0.93, -0.2];
+            const pTile = setupPositions['tile'] || [0, 0.93, 0.3];
+            const pWG = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
+            
+            let tx = pTable[0], tz = pTable[2];
+            if (onionPlacedOn === 'tile') { 
+                tx = pTile[0] + 0.08; tz = pTile[2]; 
+            } else if (onionPlacedOn === 'watchGlass') { 
+                tx = pWG[0] + 0.08; tz = pWG[2]; 
+            }
+
+            const dx = intersection.x - tx;
+            const dz = intersection.z - tz;
+            const isNear = (dx*dx + dz*dz) < 0.25; // Accurate 0.5m radius
         }
       }
     } else if (!isHeld && meshRef.current) {
@@ -58,33 +71,45 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
+    const state = useStore.getState();
     if (isHeld) {
       // LEFT CLICK WHILE HELD = CUT OR DROP
-      const state = useStore.getState();
-      const onionPosArray = state.setupPositions['onion'] || [-0.35, 0.93, -0.2];
-      const onionPos = new THREE.Vector3(...onionPosArray);
+      // 🧠 ULTRA-LENIENT ONION TRACKING (FREE FLOW)
+      const { 
+          onionPlacedOn, setupPositions, onionRootsState, 
+          rootsRemovedFromOnion, hoveredComponent, setStates 
+      } = state;
+
+      // Check multiple possible locations for the onion
+      const pTable = setupPositions['onion'] || [-0.35, 0.93, -0.2];
+      const pTile = setupPositions['tile'] || [0, 0.93, 0.3];
+      const pWG = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
+
+      const checkCut = (targetRef, offset = 0) => {
+          const distSq = Math.pow(meshRef.current.position.x - (targetRef[0] + offset), 2) + 
+                         Math.pow(meshRef.current.position.z - targetRef[2], 2);
+          return distSq < 0.3; // Precise 0.54m radius for the specific root tip area
+      };
+
+      let nearOnion = false;
+      if (onionPlacedOn === 'tile') nearOnion = checkCut(pTile, 0.08);
+      else if (onionPlacedOn === 'watchGlass') nearOnion = checkCut(pWG, 0.08);
+      else nearOnion = checkCut(pTable, 0);
+
       let cutTriggered = false;
-      
-      if (state.onionRootsState !== 'CUT_DRY' && state.onionRootsState !== 'CUT_FRESH' && !state.rootsRemovedFromOnion) {
-        // Use 2D distance (X/Z only) to avoid altitude issues
-        const distSq = Math.pow(meshRef.current.position.x - onionPos.x, 2) + 
-                       Math.pow(meshRef.current.position.z - onionPos.z, 2);
-        
-        if (distSq < 0.25 || state.hoveredComponent === 'onion') { // ~0.5m radius
-          state.setStates({ isCutting: true, cutStartTime: Date.now() });
+      if (onionRootsState !== 'CUT_DRY' && onionRootsState !== 'CUT_FRESH' && !rootsRemovedFromOnion) {
+        if (nearOnion || hoveredComponent === 'onion') { 
+          setStates({ isCutting: true, cutStartTime: Date.now() });
           cutTriggered = true;
         }
       }
 
       if (!cutTriggered) {
-          // Fix in place
           const pos = meshRef.current.position;
           useStore.getState().setSetupPosition('scalpel', [pos.x, 0.93, pos.z]);
           setHeldTool(null);
       }
-
     } else {
-      // PICK UP TOOL
       setHeldTool('scalpel');
     }
   };

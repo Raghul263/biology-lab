@@ -8,10 +8,11 @@ import VialRack from './VialRack';
 const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
   const { 
     heldTool, setHeldTool, setStates,
-    vialCapOpen, rootsInVial, rootPicked,
+    vialCapOpen, rootInVial,
     fixationStarted, fixationCompleted
   } = useStore();
   const meshRef = useRef();
+  const rootGroupRef = useRef();
   const [clockHour, setClockHour] = useState(0);
 
   const isHeld = heldTool === 'vial';
@@ -41,21 +42,41 @@ const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
             setStates({ fixationCompleted: true, rootProcessingState: 'FIXED' });
         }
     }
+
+    // 🌊 Root Floating Animation
+    if (rootInVial && rootGroupRef.current) {
+        const t = state.clock.getElapsedTime();
+        rootGroupRef.current.position.y = Math.sin(t * 2) * 0.003;
+        rootGroupRef.current.rotation.y += delta * 0.5;
+    }
   });
 
   const handleCapClick = (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
+    
+    // 🧠 TOOL PRIORITY: 
+    if (heldTool === 'forceps') {
+       if (!vialCapOpen) {
+          // If closed, open it first so we can drop
+          setStates({ vialCapOpen: true });
+       } else {
+          // If already open, perform the drop/pick
+          handleClick(e);
+       }
+       return;
+    }
+
     const newCapState = !vialCapOpen;
     setStates({ vialCapOpen: newCapState });
     
     // Start fixation if closing with root inside
-    if (!newCapState && rootsInVial && !fixationStarted) {
+    if (!newCapState && rootInVial && !fixationStarted) {
         setStates({ fixationStarted: true });
     }
   };
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
 
     if (isHeld) {
       const pos = meshRef.current.position;
@@ -64,16 +85,15 @@ const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
       return;
     }
 
-    if (heldTool === 'forceps') {
-        if (rootPicked && vialCapOpen) {
-            setStates({ rootsInVial: true, rootPicked: false });
-        } else {
-            // Priority: Allow toggling cap even when holding forceps to prepare for drop
-            setStates({ vialCapOpen: !vialCapOpen });
-        }
-    } else if (!heldTool) {
-        // Only pick up the vial if literally nothing else is happening
+    if (!heldTool) {
         setHeldTool('vial');
+    } else if (heldTool === 'forceps' && vialCapOpen) {
+        const { rootInVial, holdingRoot, setStates } = useStore.getState();
+        if (holdingRoot && !rootInVial) {
+            setStates({ rootInVial: true, holdingRoot: false });
+        } else if (!holdingRoot && rootInVial) {
+            setStates({ rootInVial: false, holdingRoot: true });
+        }
     }
   };
 
@@ -99,22 +119,24 @@ const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
           transmission={0.8} thickness={0.5} roughness={0.2} />
       </mesh>
 
-      {/* Alcohol Liquid */}
+      {/* Alcohol Liquid (Slightly clearer for better visibility) */}
       <mesh position={[0, 0.06, 0]}>
-        <cylinderGeometry args={[0.015, 0.01, 0.08, 16]} />
-        <meshStandardMaterial color="#e3f2fd" transparent opacity={0.6} />
+        <cylinderGeometry args={[0.016, 0.012, 0.08, 16]} />
+        <meshStandardMaterial color="#b3e5fc" transparent opacity={0.5} roughness={0.1} />
       </mesh>
 
-      {/* Roots in side - Improved Visuals */}
-      {rootsInVial && (
-        <group position={[0, 0.045, 0]}>
-          {[...Array(3)].map((_, i) => (
-            <mesh key={i} position={[(Math.random()-0.5)*0.008, i*0.01, (Math.random()-0.5)*0.008]} 
-                  rotation={[0.2 + i, 0.4, 0]}>
-              <cylinderGeometry args={[0.002, 0.0015, 0.03, 6]} />
-              <meshStandardMaterial color="#fdf5e6" roughness={0.3} />
-            </mesh>
-          ))}
+      {/* 🧬 Root Tip Inside (Confirmed Visibility) */}
+      {rootInVial && (
+        <group ref={rootGroupRef} position={[0, 0.04, 0]}>
+          <mesh rotation={[0.4, 0.5, 0]}>
+            <cylinderGeometry args={[0.004, 0.003, 0.025, 8]} />
+            <meshStandardMaterial color="#fff9c4" emissive="#fbc02d" emissiveIntensity={0.2} />
+          </mesh>
+          {/* Subtle bubble effect for "floating" */}
+          <mesh position={[0.005, 0.01, 0]}>
+            <sphereGeometry args={[0.001, 8, 8]} />
+            <meshBasicMaterial color="white" transparent opacity={0.4} />
+          </mesh>
         </group>
       )}
 

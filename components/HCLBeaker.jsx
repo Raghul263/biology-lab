@@ -26,14 +26,15 @@ const HCLBeaker = ({ position: initialPosition = [-1.5, 0.93, -0.3] }) => {
   });
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    if (heldTool !== 'dropper') e.stopPropagation();
     if (isHeld) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('hclBeaker', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
     } else if (heldTool === 'dropper') {
-      setStates({ dropperContents: 'HCL' });
-      useStore.getState().showWrongAction('Dropper filled with 1M HCl');
+      // Just stop propagation so we don't drop the dropper, 
+      // but the Dropper component's proximity logic will handle the actual snap 
+      // when it sees the beaker was clicked.
     } else if (!heldTool) {
       setHeldTool('hclBeaker');
     }
@@ -43,10 +44,14 @@ const HCLBeaker = ({ position: initialPosition = [-1.5, 0.93, -0.3] }) => {
 
   return (
     <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
-      onPointerOver={() => { 
+      onPointerOver={(e) => { 
         if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+        setStates({ hoveredComponent: 'hclBeaker' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
       {showHighlight && (
         <group position={[0, 0.28, 0]}>
@@ -84,8 +89,16 @@ const HCLBeaker = ({ position: initialPosition = [-1.5, 0.93, -0.3] }) => {
         <meshPhysicalMaterial color="#ffffff" transmission={0.9} roughness={0.1} clearcoat={1} />
       </mesh>
 
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.25, 16]} />
+      {/* 🖱️ RIGID INTERACTION AREA (Transparent) */}
+      <mesh 
+        position={[0, 0.12, 0]} 
+        onPointerDown={(e) => {
+          // If we have the dropper, don't stop propagation—let the dropper's own handler catch it
+          // OR we can explicitly call the snap logic here if we were using a global state.
+          // For now, let's just make sure it's wide enough for the click to hit.
+        }}
+      >
+        <cylinderGeometry args={[0.15, 0.15, 0.25, 16]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>

@@ -26,14 +26,15 @@ const StainBeaker = ({ position: initialPosition = [-1.5, 0.93, 0.1] }) => {
   });
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    if (heldTool !== 'dropper') e.stopPropagation();
     if (isHeld) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('stainBeaker', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
     } else if (heldTool === 'dropper') {
-      setStates({ dropperContents: 'STAIN' });
-      useStore.getState().showWrongAction('Dropper filled with Aceto-orcein Stain');
+      // Just stop propagation so we don't drop the dropper, 
+      // but the Dropper component's proximity logic will handle the actual snap 
+      // when it sees the beaker was clicked.
     } else if (!heldTool) {
       setHeldTool('stainBeaker');
     }
@@ -45,8 +46,12 @@ const StainBeaker = ({ position: initialPosition = [-1.5, 0.93, 0.1] }) => {
     <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
       onPointerOver={() => { 
         if (isActive || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+        setStates({ hoveredComponent: 'stainBeaker' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
       {isActive && (
         <group position={[0, 0.28, 0]}>

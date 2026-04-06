@@ -5,41 +5,66 @@ import * as THREE from 'three';
 
 const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
   const {
-    rootOnSlide, slideFluids, slideHeatedTime, setStates, heldTool, setHeldTool,
-    coverSlipPlaced, squashed, dropperContents
+    rootOnSlide, hclApplied, stainApplied, setStates, heldTool, setHeldTool,
+    coverSlipPlaced, squashed
   } = useStore();
   
   const isHeld = heldTool === 'slide';
   const groupRef = useRef();
+  const [unlockTime, setUnlockTime] = useState(0); // 🧠 Cooldown to prevent instant re-snap
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
   useFrame((state, delta) => {
+    if (unlockTime > 0) setUnlockTime(prev => Math.max(0, prev - delta));
+
     if (isHeld && groupRef.current) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
       if (intersection) {
-        const cx = Math.max(-2.0, Math.min(2.0, intersection.x));
-        const cz = Math.max(-0.8, Math.min(0.8, intersection.z));
-        groupRef.current.position.set(cx, 0.93, cz);
+        let cx = Math.max(-2.0, Math.min(2.0, intersection.x));
+        let cz = Math.max(-0.8, Math.min(0.8, intersection.z));
+        let cy = 0.93;
+
+        // 🔥 AUTOMATIC SNAP TO BURNER TOP (Only if not recently unlocked)
+        const burnerPos = useStore.getState().setupPositions['burner'] || [0.7, 0.93, 0];
+        if (unlockTime <= 0 && Math.abs(cx - burnerPos[0]) < 0.15 && Math.abs(cz - burnerPos[2]) < 0.15) {
+            cx = burnerPos[0];
+            cz = burnerPos[2];
+            cy = 1.22;
+        }
+
+        groupRef.current.position.set(cx, cy, cz);
       }
     } else if (!isHeld && groupRef.current && initialPosition) {
-        groupRef.current.position.set(...initialPosition);
+        const { setupPositions } = useStore.getState();
+        const pos = setupPositions['slide'] || initialPosition;
+        groupRef.current.position.set(...pos);
     }
   });
 
   const handleInteraction = (e) => {
-    e.stopPropagation();
+    if (heldTool !== 'dropper') {
+        if (e && e.stopPropagation) e.stopPropagation();
+    }
     
+    const store = useStore.getState(); // 🧠 Added store definition
+
     if (isHeld) {
       const pos = groupRef.current.position;
-      const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
+      const microPos = store.setupPositions['microscope'] || [0, 1.0, -0.7];
+      const burnerPos = store.setupPositions['burner'] || [0.7, 0.93, 0];
       
-      // Snap logic to microscope
+      // 🔬 Snap logic to microscope
       if (Math.abs(pos.x - microPos[0]) < 0.25 && Math.abs(pos.z - microPos[2]) < 0.3) {
         setStates({ slideOnMicroscope: true });
         useStore.getState().setSetupPosition('slide', [microPos[0], 1.0 + 0.1, microPos[2] + 0.08]);
-      } else {
+      } 
+      // 🔥 Snap logic to Burner (Top)
+      else if (Math.abs(pos.x - burnerPos[0]) < 0.15 && Math.abs(pos.z - burnerPos[2]) < 0.15) {
+        useStore.getState().setSetupPosition('slide', [burnerPos[0], 1.22, burnerPos[2]]);
+      }
+      else {
         useStore.getState().setSetupPosition('slide', [pos.x, 0.93, pos.z]);
       }
       setHeldTool(null);
@@ -48,17 +73,20 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
 
     const state = useStore.getState();
 
-    if (heldTool === 'forceps' && state.rootsInForceps) {
-      setStates({ rootOnSlide: true, rootsInForceps: false });
-      setHeldTool(null);
-    } else if (heldTool === 'dropper' && dropperContents) {
-      const newFluids = [...slideFluids, dropperContents];
-      setStates({ slideFluids: newFluids, dropperContents: null });
-      setHeldTool(null);
+    if (heldTool === 'forceps') {
+      const { rootOnSlide, holdingRoot, setStates } = useStore.getState();
+      if (holdingRoot && !rootOnSlide) {
+        setStates({ rootOnSlide: true, holdingRoot: false });
+      } else if (!holdingRoot && rootOnSlide) {
+        setStates({ rootOnSlide: false, holdingRoot: true });
+      }
+    } else if (heldTool === 'dropper' && state.dropperState) {
+      // Direct application logic moved to Dropper.jsx head click, 
+      // but we can keep a fallback here if needed.
     } else if (heldTool === 'filterPaper') {
       // Filter paper absorbs fluid completely
-      if (slideFluids.length > 0) {
-         setStates({ slideFluids: [] });
+      if (hclApplied || stainApplied) {
+         setStates({ hclApplied: false, stainApplied: false });
       }
       setHeldTool(null);
     } else if (heldTool === 'needle' && coverSlipPlaced && !squashed) {
@@ -67,17 +95,11 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
     } else if (!heldTool && !squashed) {
       // Pick up the slide if empty handed and not squashed yet
       setHeldTool('slide');
+      setUnlockTime(1.5); // 🧠 Give user 1.5s to move away from burner/microscope
     }
   };
 
-  // Determine fluid visual state based on drops and evaporation
-  const hasStain = slideFluids.includes('STAIN');
-  const hasWater = slideFluids.includes('WATER');
-  const { rootProcessingState } = useStore.getState();
-  
-  // Calculate evaporation based on slideHeatedTime
-  const heatDecay = Math.max(0, 1 - (slideHeatedTime / 300)); 
-
+  // Determine fluid visual state based on new store variables
   return (
     <group ref={groupRef} position={initialPosition}
       onPointerDown={handleInteraction}
@@ -85,8 +107,12 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
         if (isHeld) document.body.style.cursor = 'grabbing';
         else if (squashed) document.body.style.cursor = 'grab';
         else document.body.style.cursor = 'pointer';
+        setStates({ hoveredComponent: 'slide' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
       {/* 🟦 THE SLIDE */}
       <mesh castShadow receiveShadow>
@@ -95,33 +121,47 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
           thickness={0.05} roughness={0.02} ior={1.5} clearcoat={1} />
       </mesh>
 
-      {/* 💧 FLUIDS LAYER */}
-      {slideFluids.length > 0 && (
-         <group position={[0, 0.003, 0]}>
-           <mesh rotation={[-Math.PI / 2, 0, 0]}>
-             <circleGeometry args={[0.045, 32]} />
-             <meshPhysicalMaterial 
-               color={hasStain ? "#c62828" : "#81d4fa"}
-               transparent 
-               opacity={squashed ? 0.2 : (hasStain ? 0.8 : 0.5) * heatDecay} 
-               transmission={0.9} 
-               roughness={0.0} 
-               ior={1.33}
-             />
-           </mesh>
-         </group>
+      {/* 💧 HCl: TRANSPARENT SPREAD (Dynamic Growth) */}
+      {hclApplied && (
+        <mesh position={[0, 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.055, 32]} />
+          <meshPhysicalMaterial 
+            color="#81d4fa"
+            transparent 
+            opacity={0.3} 
+            transmission={0.9} 
+            roughness={0.0} 
+            ior={1.33}
+          />
+          {/* Simple entry animation for radial spread */}
+          <ambientLight intensity={0.1} /> 
+        </mesh>
+      )}
+
+      {/* 🔴 STAIN: RED DIFFUSION */}
+      {stainApplied && (
+        <mesh position={[0, 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.045, 32]} />
+          <meshPhysicalMaterial 
+            color="#d32f2f"
+            transparent 
+            opacity={0.7} 
+            transmission={0.5} 
+            roughness={0.1}
+          />
+        </mesh>
       )}
 
       {/* 🧬 ROOT LAYER */}
       {rootOnSlide && (
-        <group position={[0, 0.004, 0]}>
+        <group position={[0, 0.006, 0]}>
           <mesh 
             scale={squashed ? [2.5, 0.05, 2.5] : [1, 1, 1]}
-            position={[0, squashed ? -0.001 : 0, 0]}
+            position={[0, squashed ? -0.002 : 0, 0]}
           >
             <cylinderGeometry args={[0.005, 0.006, 0.02, 16]} />
             <meshStandardMaterial 
-              color={rootProcessingState === 'STAINED' || hasStain ? "#880e4f" : (rootProcessingState === 'MACERATED' ? "#f0f4c3" : "#f0e6c8")} 
+              color={stainApplied ? "#ad1457" : "#f0e6c8"} 
               transparent={squashed}
               opacity={squashed ? 0.6 : 1.0}
             />

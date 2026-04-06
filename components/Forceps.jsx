@@ -8,7 +8,7 @@ import useStore from '../lib/store';
  * Features: Dark handle, joined back, pointed tips, visible roots.
  */
 const Forceps = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, rootsInForceps, rootPicked, setStates } = useStore();
+  const { heldTool, setHeldTool, holdingRoot, setStates } = useStore();
   const groupRef = useRef();
   const isHeld = heldTool === 'forceps';
   const { raycaster } = useThree();
@@ -38,44 +38,55 @@ const Forceps = ({ position = [0, 0, 0] }) => {
     if (prevHeld.current === 'forceps' && heldTool !== 'forceps' && groupRef.current) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
-      setStates({ forcepsReady: true });
     }
     prevHeld.current = heldTool;
   }, [heldTool]);
 
   const handleClick = (e) => {
-    e.stopPropagation();
-    const { hoveredComponent, watchGlassRootCount, vialCapOpen, setStates } = useStore.getState();
+    if (e && e.stopPropagation) e.stopPropagation();
+    const state = useStore.getState();
+    const { 
+        setHeldTool, setStates, holdingRoot, watchGlassRootCount, 
+        vialCapOpen, rootInVial, rootOnSlide, setupPositions 
+    } = state;
 
     if (isHeld) {
-      // 🧠 SMART TOOL ACTION PRIORITIZATION
-      if (hoveredComponent === 'watchGlass' && !rootPicked && watchGlassRootCount > 0) {
-        // ACTION: Pick up root (DO NOT DROP TOOL)
-        setStates({ 
-          rootPicked: true, 
-          watchGlassRootCount: watchGlassRootCount - 1,
-          rootTipsInWatchGlass: (watchGlassRootCount - 1) > 0
-        });
-        return;
-      }
-
-      if (hoveredComponent === 'vial' && rootPicked && vialCapOpen) {
-        // ACTION: Drop root AND drop tool (Fix position)
-        setStates({ rootInVial: true, rootPicked: false });
-        const pos = groupRef.current.position;
-        useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
-        setHeldTool(null);
-        setStates({ forcepsReady: true });
-        return;
-      }
-
-      // DEFAULT: Fix position (Drop tool)
       const pos = groupRef.current.position;
+      
+      // 🧠 ULTRA-LENIENT DISTANCE DETECTION (Matches Scalpel Logic)
+      const checkDist = (targetKey, defaultPos) => {
+          const t = setupPositions[targetKey] || defaultPos;
+          const distSq = Math.pow(pos.x - t[0], 2) + Math.pow(pos.z - t[2], 2);
+          return distSq < 0.4; // Large 0.63m radius for guaranteed "Proper" drop
+      };
+
+      // 1. WATCH GLASS (Pick up)
+      if (checkDist('watchGlass', [1.0, 0.93, -0.1]) && !holdingRoot && watchGlassRootCount > 0) {
+        setStates({ holdingRoot: true, watchGlassRootCount: watchGlassRootCount - 1 });
+        return;
+      }
+
+      // 2. FIXATIVE VIAL (Pick/Drop)
+      if (checkDist('vial', [0.5, 0.93, -0.6]) && vialCapOpen) {
+        if (holdingRoot && !rootInVial) {
+            setStates({ rootInVial: true, holdingRoot: false });
+        } else if (!holdingRoot && rootInVial) {
+            setStates({ rootInVial: false, holdingRoot: true });
+        }
+        return;
+      }
+
+      // 3. GLASS SLIDE (Drop)
+      if (checkDist('slide', [0, 0.93, -0.5]) && holdingRoot && !rootOnSlide) {
+        setStates({ rootOnSlide: true, holdingRoot: false });
+        return;
+      }
+
+      // DEFAULT: Fix in place (Drop tool)
       useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
-      setStates({ forcepsReady: true });
     } else {
-      setHeldTool('forceps');
+      if (!heldTool) setHeldTool('forceps');
     }
   };
 
@@ -183,7 +194,7 @@ const Forceps = ({ position = [0, 0, 0] }) => {
         </group>
 
         {/* Carried Root (One at a time) */}
-        {rootPicked && (
+        {holdingRoot && (
           <group position={[0.155, 0, 0.003]}>
             <mesh 
               position={[0, 0, 0]}

@@ -24,54 +24,60 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
         groupRef.current.position.set(intersection.x, 0.93, intersection.z);
       }
     } else if (!isHeld && groupRef.current && initialPosition) {
-      groupRef.current.position.set(...initialPosition);
+      const { setupPositions } = useStore.getState();
+      const pos = setupPositions['burner'] || initialPosition;
+      groupRef.current.position.set(...pos);
     }
 
     if (flameRef.current && flameOn) {
       const t = state.clock.elapsedTime;
-      // ... existing flicker animation ...
+      // Precise flicker
+      flameRef.current.scale.set(
+        1 + Math.sin(t * 12) * 0.05,
+        1 + Math.sin(t * 15) * 0.1,
+        1 + Math.sin(t * 12) * 0.05
+      );
       
-      // 🔥 HEATING LOGIC
+      // 🔥 HEATING LOGIC (Watch Glass & Slide)
       const store = useStore.getState();
-      if (heldTool === 'watchGlass' && groupRef.current) {
-        const wgPos = store.setupPositions['watchGlass'] || [0.35, 0.93, -0.2];
+      if (groupRef.current) {
+        // Heating Watch Glass
+        const wgPos = store.setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
         const burnerPos = groupRef.current.position;
-        const dist = Math.hypot(wgPos[0] - burnerPos.x, wgPos[2] - burnerPos.z);
-        
-        if (dist < 0.2) {
+        const distToWG = Math.hypot(wgPos[0] - burnerPos.x, wgPos[2] - burnerPos.z);
+        if (distToWG < 0.25) {
           const newTime = (store.watchGlassHeatedTime || 0) + 1;
           const updates = { watchGlassHeatedTime: newTime };
-          
           if (store.watchGlassFluid === 'HCL' && newTime > 150) {
             updates.rootProcessingState = 'MACERATED';
           } else if (store.watchGlassFluid === 'STAIN' && newTime > 300) {
             updates.rootProcessingState = 'STAINED';
           }
-          
           setStates(updates);
+        }
+
+        // Heating Slide (while held over flame)
+        if (heldTool === 'slide') {
+          // Slide heating logic handled in handleClick or here? 
+          // Let's do it in useFrame for continuous Heating
         }
       }
     }
   });
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (isHeld) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('burner', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
     } else if (!heldTool) {
       setHeldTool('burner');
-    } else if (heldTool === 'slide' && flameOn) {
-       setStates({ 
-          slideHeatedTime: (slideHeatedTime || 0) + 1,
-          heated: true 
-       });
     }
   };
 
   const toggleFlame = (e) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     setFlameOn(!flameOn);
   };
 
@@ -80,19 +86,11 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
   const showHighlight = isHeld || !heldTool || heldTool === 'slide';
 
   return (
-    <group ref={groupRef} position={initialPosition} onClick={handleClick}
+    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
       onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {heldTool === 'slide' && flameOn && (
-        <group position={[0, 0.25, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.08, 0.005, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
-          </mesh>
-        </group>
-      )}
-
+      {/* 🛑 Base & Tank */}
       <mesh castShadow receiveShadow position={[0, 0.02, 0]}>
         <cylinderGeometry args={[0.02, 0.08, 0.04, 32]} />
         <meshStandardMaterial {...redMat} />
@@ -102,7 +100,8 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
         <meshStandardMaterial {...redMat} />
       </mesh>
 
-      <group position={[0, 0.06, 0.022]} onClick={toggleFlame}
+      {/* 🔘 Control Knob - Fixed to prevent pick-up conflict */}
+      <group position={[0, 0.06, 0.022]} onPointerDown={toggleFlame}
         onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => (document.body.style.cursor = 'auto')}
       >
@@ -111,24 +110,20 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
           <meshStandardMaterial color={flameOn ? "#4caf50" : "#212121"} emissive={flameOn ? "#4caf50" : "#000000"} emissiveIntensity={0.5} />
         </mesh>
         <mesh position={[0, 0, 0.01]}>
-          <sphereGeometry args={[0.004, 8, 8]} />
+          <sphereGeometry args={[0.006, 16, 16]} />
           <meshBasicMaterial color={flameOn ? "#4caf50" : "#f44336"} />
         </mesh>
       </group>
 
+      {/* 🏷️ Air Intake */}
       <group position={[0, 0.05, -0.02]} rotation={[-Math.PI / 2, 0, 0]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.008, 0.01, 0.07, 16]} />
           <meshStandardMaterial {...chromeMat} />
         </mesh>
-        {[0.01, 0.02, 0.03].map((z, i) => (
-          <mesh key={i} position={[0, z, 0]}>
-            <torusGeometry args={[0.01, 0.002, 8, 16]} />
-            <meshStandardMaterial {...chromeMat} />
-          </mesh>
-        ))}
       </group>
 
+      {/* 🌫️ Gas Tube */}
       <mesh castShadow>
         <tubeGeometry args={[
           new THREE.CatmullRomCurve3([
@@ -142,18 +137,9 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
         <meshStandardMaterial color="#1a1a1a" roughness={1.0} metalness={0} />
       </mesh>
 
+      {/* 🚀 Burner Head */}
       <group position={[0, 0.08, 0]}>
-        <mesh position={[0, 0.01, 0]}>
-          <cylinderGeometry args={[0.018, 0.02, 0.02, 16]} />
-          <meshStandardMaterial {...chromeMat} />
-        </mesh>
-        {[0, Math.PI/2, Math.PI, Math.PI*1.5].map((rot, i) => (
-          <mesh key={i} position={[Math.cos(rot)*0.018, 0.01, Math.sin(rot)*0.018]}>
-            <circleGeometry args={[0.004, 8]} />
-            <meshBasicMaterial color="#000000" />
-          </mesh>
-        ))}
-        <mesh castShadow position={[0, 0.1, 0]}>
+        <mesh position={[0, 0.1, 0]}>
           <cylinderGeometry args={[0.015, 0.015, 0.18, 24]} />
           <meshStandardMaterial {...chromeMat} />
         </mesh>
@@ -161,12 +147,13 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
           <cylinderGeometry args={[0.018, 0.015, 0.01, 16, 1, true]} />
           <meshStandardMaterial {...chromeMat} side={THREE.DoubleSide} />
         </mesh>
-        <mesh position={[0, 0.186, 0]}>
-          <circleGeometry args={[0.014, 16]} rotation={[-Math.PI / 2, 0, 0]} />
+        <mesh position={[0, 0.186, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.014, 16]} />
           <meshBasicMaterial color="#000000" />
         </mesh>
       </group>
 
+      {/* 🔥 The Flame */}
       {flameOn && (
         <group position={[0, 0.27, 0]}>
           <group ref={flameRef}>
@@ -174,11 +161,6 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
               <cylinderGeometry args={[0.002, 0.012, 0.10, 12, 8, true]} />
               <meshStandardMaterial color="#ff9800" transparent opacity={0.6} side={THREE.DoubleSide} 
                 emissive="#ff5722" emissiveIntensity={2.5} />
-            </mesh>
-            <mesh position={[0, 0.04, 0]}>
-              <cylinderGeometry args={[0.001, 0.008, 0.08, 12, 8, true]} />
-              <meshStandardMaterial color="#ffeb3b" transparent opacity={0.8} side={THREE.DoubleSide}
-                emissive="#ffeb3b" emissiveIntensity={4} />
             </mesh>
             <mesh position={[0, 0.015, 0]}>
               <cylinderGeometry args={[0.006, 0.012, 0.03, 12, 1, true]} />
