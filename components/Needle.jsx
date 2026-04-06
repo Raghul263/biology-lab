@@ -39,10 +39,22 @@ const Needle = ({ position = [0, 0, 0] }) => {
 
   return (
     <group ref={meshRef} position={position}
-      onClick={handleClick}
-      onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      onPointerDown={handleClick}
+      onPointerOver={() => { if (!isHeld) document.body.style.cursor = 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
+      {/* 🔴 INTERACTION ZONE: While held, this captures the user's "Fix" click anywhere on the table */}
+      {isHeld && (
+        <mesh 
+          position={[0, 0, 0]} 
+          onPointerDown={handleClick}
+          onPointerOver={() => { document.body.style.cursor = 'cell'; }}
+        >
+          <planeGeometry args={[1.5, 1.5]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+
       {showHighlight && (
         <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.06, 0.004, 16, 32]} />

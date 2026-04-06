@@ -38,21 +38,22 @@ const CellTile = ({ phase, isSelected, onClick, focus }) => {
 };
 
 const MicroscopeUI = () => {
-  const { toggleMicroscope } = useStore();
+  const { toggleMicroscope, squashed, rootProcessingState } = useStore();
   const [focus, setFocus] = useState(0.5);
   const [selectedCell, setSelectedCell] = useState(null);
 
   const [cells] = useState(() => {
     const arr = [];
     const keys = Object.keys(PHASES);
-    for (let i = 0; i < 16; i++) {
-      const phase = i < 4 ? 'Interphase' : keys[Math.floor(Math.random() * keys.length)];
+    for (let i = 0; i < 20; i++) {
+      const phase = i < 5 ? 'Interphase' : keys[Math.floor(Math.random() * keys.length)];
       arr.push({ id: i, phase });
     }
     return arr.sort(() => Math.random() - 0.5);
   });
 
   const handleCellClick = (cell) => {
+    if (!squashed) return;
     setSelectedCell(cell);
   };
 
@@ -63,7 +64,7 @@ const MicroscopeUI = () => {
       position: 'absolute', inset: 0, background: 'rgba(5,7,12,0.98)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       zIndex: 200, fontFamily: '"Outfit", sans-serif', color: 'white',
-      backdropFilter: 'blur(10px)'
+      backdropFilter: 'blur(12px)'
     }}>
       <div style={{
         position: 'absolute', top: '30px', left: '30px',
@@ -71,9 +72,16 @@ const MicroscopeUI = () => {
       }}>
         <div style={{ padding: '4px 12px', background: 'rgba(255,145,0,0.15)', border: '1px solid rgba(255,145,0,0.3)', borderRadius: '4px', fontSize: '10px', color: '#ff9100', fontWeight: 800 }}>40X OBJECTIVE</div>
         <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>Total Magnification: 400X</div>
-        <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', marginTop: '8px' }}>
-          Click on any cell to identify its mitotic stage
-        </div>
+        
+        {squashed ? (
+          <div style={{ color: '#4caf50', fontSize: '11px', marginTop: '8px', fontWeight: 600 }}>
+            ✨ SPECIMEN READY
+          </div>
+        ) : (
+          <div style={{ color: '#f44336', fontSize: '11px', marginTop: '8px', fontWeight: 600 }}>
+            ⚠️ SPECIMEN TOO THICK
+          </div>
+        )}
       </div>
 
       <button onClick={() => toggleMicroscope(false)}
@@ -82,16 +90,27 @@ const MicroscopeUI = () => {
 
       <div style={{ position: 'relative' }}>
         <div style={{
-          width: '520px', height: '520px', borderRadius: '50%', overflow: 'hidden',
-          background: '#05070a', border: '12px solid #1a1a1a', display: 'flex',
+          width: '560px', height: '560px', borderRadius: '50%', overflow: 'hidden',
+          background: '#05070a', border: '14px solid #1a1a1a', display: 'flex',
           flexWrap: 'wrap', padding: '50px', justifyContent: 'center', alignItems: 'center',
-          boxShadow: '0 0 100px rgba(0,0,0,0.8), inset 0 0 60px black', position: 'relative'
+          boxShadow: '0 0 100px rgba(0,0,0,0.8), inset 0 0 80px black', position: 'relative'
         }}>
-          {cells.map(cell => (
-            <CellTile key={cell.id} phase={cell.phase} focus={focus}
-              isSelected={selectedCell?.id === cell.id}
-              onClick={() => handleCellClick(cell)} />
-          ))}
+          {squashed ? (
+            cells.map(cell => (
+              <CellTile key={cell.id} phase={cell.phase} focus={focus}
+                isSelected={selectedCell?.id === cell.id}
+                onClick={() => handleCellClick(cell)} />
+            ))
+          ) : (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', opacity: 0.8
+            }}>
+               <div style={{ width: '200px', height: '140px', background: rootProcessingState === 'STAINED' ? '#4a148c' : '#37474f', borderRadius: '40% 60% 30% 70%', filter: 'blur(10px)' }} />
+               <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', textAlign: 'center' }}>
+                 Tissues are layered. Use Filter Paper to squash the specimen.
+               </p>
+            </div>
+          )}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle, transparent 35%, black 100%)', opacity: 0.9 }} />
         </div>
         <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.02) 0%, transparent 70%)' }} />
@@ -114,10 +133,10 @@ const MicroscopeUI = () => {
         ) : (
           <div>
             <p style={{ color: 'rgba(255,145,0,0.7)', fontSize: '13px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Scanning Specimen...
+              {squashed ? '🔍 Identifying Cell Phases' : '⚠️ Observation Blocked'}
             </p>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px' }}>
-              Click on any cell in the field of view to analyze its mitotic stage.
+              {squashed ? 'Click on any stained cell to analyze its mitotic stage.' : 'Prepare the slide correctly to see individual cells.'}
             </p>
           </div>
         )}

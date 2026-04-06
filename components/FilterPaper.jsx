@@ -29,7 +29,18 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
   const handleClick = (e) => {
     e.stopPropagation();
     if (isHeld) {
+      const { setupPositions, setStates, coverSlipPlaced, rootOnSlide } = useStore.getState();
       const pos = heldRef.current ? heldRef.current.position : new THREE.Vector3(...initialPosition);
+      
+      const slidePos = setupPositions['slide'] || [0, 0.93, 0.2];
+      const dist = Math.hypot(pos.x - slidePos[0], pos.z - slidePos[2]);
+
+      if (dist < 0.25 && rootOnSlide && coverSlipPlaced) {
+        // 🔥 THE SQUASH!
+        setStates({ squashed: true });
+        useStore.getState().showWrongAction("Root squashed successfully. Specimen is ready!");
+      }
+      
       useStore.getState().setSetupPosition('filterPaper', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
     } else {

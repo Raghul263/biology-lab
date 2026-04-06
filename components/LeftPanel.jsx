@@ -42,17 +42,7 @@ const LeftPanel = () => {
       borderRight: '1px solid rgba(255,255,255,0.08)',
       display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
     }}>
-      <div style={{
-        padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)',
-        background: 'rgba(255,109,0,0.15)', flexShrink: 0,
-      }}>
-        <div style={{ fontSize: '9px', letterSpacing: '3px', color: '#ff9800', marginBottom: '4px', fontWeight: 600 }}>
-          {!allPlaced ? 'INITIAL SETUP' : 'EQUIPMENT'}
-        </div>
-        <div style={{ fontSize: '15px', fontWeight: 700, color: 'white' }}>
-          {!allPlaced ? '📦 Unpack Supplies' : '🧫 Instrument Bench'}
-        </div>
-      </div>
+      {/* header removed */}
 
       <div style={{
         flex: 1, 
@@ -87,37 +77,46 @@ const LeftPanel = () => {
                 gap: isArrangeStep ? '6px' : '12px',
                 position: 'relative',
               }}
-              onClick={() => handleInteract(inst)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleInteract(inst);
+              }}
               draggable={!isPlaced}
               onDragStart={(e) => {
                 e.dataTransfer.setData('inst_id', inst.id);
                 e.dataTransfer.effectAllowed = 'copy';
               }}
             >
-              <span style={{ fontSize: isArrangeStep ? '22px' : '24px' }}>{inst.icon}</span>
-              <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-                <div style={{ 
-                  fontSize: isArrangeStep ? '11px' : '13px', 
-                  fontWeight: 600, 
-                  color: isPlaced && isArrangeStep ? '#9e9e9e' : 'white',
-                  lineHeight: 1.2,
-                  whiteSpace: isArrangeStep ? 'normal' : 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: isArrangeStep ? '26px' : '28px' }}>{inst.icon}</span>
+                <span style={{ 
+                  color: isSelected ? '#ff9800' : 'rgba(255,255,255,0.95)', 
+                  fontSize: '10px', fontWeight: 800, 
+                  marginTop: '6px', letterSpacing: '0.4px',
+                  textTransform: 'uppercase', textAlign: 'center',
+                  width: '100%', overflow: 'hidden', textOverflow: 'clip', whiteSpace: 'normal',
+                  lineHeight: '1.2'
                 }}>
                   {inst.name}
-                </div>
-                {!isArrangeStep && (
-                  <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                </span>
+                {(!isArrangeStep || isSelected) && (
+                  <span style={{ 
+                    color: 'rgba(255,255,255,0.45)', fontSize: '8.5px', 
+                    marginTop: '3px', textAlign: 'center', fontWeight: 500
+                  }}>
                     {inst.desc}
-                  </div>
+                  </span>
                 )}
               </div>
+              
               {isPlaced && (
                 <span style={{ 
                   position: isArrangeStep ? 'absolute' : 'static',
-                  top: '5px', right: '5px',
-                  fontSize: '14px', color: '#ff9800' 
+                  top: '6px', right: '6px',
+                  fontSize: '11px', color: '#ff9800',
+                  background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.3)',
+                  borderRadius: '50%', width: '18px', height: '18px', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>✓</span>
               )}
             </div>
@@ -125,14 +124,7 @@ const LeftPanel = () => {
         })}
       </div>
 
-      <div style={{
-        padding: '16px', background: 'rgba(0,0,0,0.2)',
-        fontSize: '11px', color: 'rgba(255,255,255,0.3)', textAlign: 'center', lineHeight: 1.4,
-      }}>
-        {!allPlaced
-          ? "Click items to place them on the lab table."
-          : "Select a tool to use in the experiment."}
-      </div>
+      {/* footer instructions removed */}
     </div>
   );
 };

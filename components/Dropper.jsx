@@ -17,7 +17,7 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
       if (intersection) {
         intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
         intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
-        meshRef.current.position.set(intersection.x, 0.93, intersection.z);
+        meshRef.current.position.set(intersection.x, 1.1, intersection.z); // Elevated for clearance
       }
     } else if (!isHeld && meshRef.current && initialPosition) {
       meshRef.current.position.set(...initialPosition);
@@ -27,9 +27,32 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
   const handleClick = (e) => {
     e.stopPropagation();
     if (isHeld) {
+      // 🧪 INTERACTIVE DROPPER: Check if near a target that can receive drops
+      const { setupPositions, setStates, watchGlassFluid, slideFluids } = useStore.getState();
       const pos = meshRef.current.position;
-      useStore.getState().setSetupPosition('dropper', [pos.x, 0.93, pos.z]);
-      setHeldTool(null);
+      
+      const wgPos = setupPositions['watchGlass'] || [0.35, 0.93, -0.2];
+      const distToWg = Math.hypot(pos.x - wgPos[0], pos.z - wgPos[2]);
+      
+      const slidePos = setupPositions['slide'] || [0.5, 0.93, 0.3];
+      const distToSlide = Math.hypot(pos.x - slidePos[0], pos.z - slidePos[2]);
+
+      if (distToWg < 0.25 && dropperContents) {
+        // Drop on Watch Glass
+        setStates({ watchGlassFluid: dropperContents, dropperContents: null });
+        useStore.getState().showWrongAction(`Dropped ${dropperContents} in Watch Glass.`);
+      } else if (distToSlide < 0.2 && dropperContents) {
+        // Drop on Slide
+        setStates({ 
+          slideFluids: [...(slideFluids || []), dropperContents],
+          dropperContents: null 
+        });
+        useStore.getState().showWrongAction(`Dropped ${dropperContents} on Slide.`);
+      } else {
+        // Not near anything, just drop the tool back on the stand
+        useStore.getState().setSetupPosition('dropper', [pos.x, 0.93, pos.z]);
+        setHeldTool(null);
+      }
     } else {
       if (!heldTool) setHeldTool('dropper');
     }
@@ -63,10 +86,22 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
       </group>
 
       {/* 2. THE DROPPER (Moves and Rotates) */}
-      <group ref={meshRef} onClick={handleClick}
-        onPointerOver={() => (document.body.style.cursor = 'pointer')}
+      <group ref={meshRef} onPointerDown={handleClick}
+        onPointerOver={() => { if (!isHeld) document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => (document.body.style.cursor = 'auto')}
       >
+        {/* 🔴 INTERACTION ZONE: While held, this captures the user's "Fix" click at the bulb area */}
+        {isHeld && (
+          <mesh 
+            position={[0, 0.26, 0]} 
+            onPointerDown={handleClick}
+            onPointerOver={() => { document.body.style.cursor = 'cell'; }}
+          >
+            <boxGeometry args={[0.2, 0.1, 0.1]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+        )}
+
         {showHighlight && (
           <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.08, 0.005, 16, 32]} />
@@ -75,7 +110,7 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
         )}
 
         {/* Straight Dropper (Always Upright as requested) */}
-        <group rotation={[0, 0, 0]} position={isHeld ? [0, 0, 0] : [0, 0, 0]}>
+        <group rotation={[0, 0, 0]} position={isHeld ? [0, -0.15, 0] : [0, 0, 0]}>
           {/* Bulb */}
           <mesh castShadow position={[0, 0.26, 0]}>
             <sphereGeometry args={[0.038, 32, 32]} />

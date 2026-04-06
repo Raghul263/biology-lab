@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
-import useStore from '../lib/store';
+import useStore, { STEPS } from '../lib/store';
 
-const WatchGlass = ({ position: initialPosition = [0.35, 0.93, -0.2] }) => {
-  const { heldTool, setHeldTool, setStates, rootsInWatchGlass } = useStore();
+const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
+  const { currentStep, heldTool, setHeldTool, setStates, rootTipsInWatchGlass, acidAdded, stainAdded, watchGlassRootCount, rootPicked } = useStore();
+
   const isHeld = heldTool === 'watchGlass';
-  const groupRef = React.useRef();
+  const groupRef = useRef();
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
+  // Interaction Logic (Repositioning)
   useFrame(() => {
     if (isHeld && groupRef.current) {
       const intersection = new THREE.Vector3();
@@ -24,110 +26,158 @@ const WatchGlass = ({ position: initialPosition = [0.35, 0.93, -0.2] }) => {
     }
   });
 
+  const isTarget = currentStep === STEPS.TREATMENT && !(acidAdded && stainAdded);
+  
+  // Highlight when holding dropper, scalpel, or forceps (if ready to use)
+  const isReadyToCut = useStore.getState().onionPlacedOn === 'watchGlass' && !useStore.getState().isCutting && useStore.getState().onionRootsState !== 'CUT_DRY' && useStore.getState().onionRootsState !== 'CUT_FRESH';
+  const showHighlight = isTarget || (currentStep === STEPS.CUT_INITIAL && !rootTipsInWatchGlass) || isHeld || (heldTool === 'scalpel' && isReadyToCut) || (heldTool === 'forceps' && !rootPicked && watchGlassRootCount > 0);
+
   const handleInteraction = (e) => {
     e.stopPropagation();
+
+    // Pick up / Drop logic
     if (isHeld) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('watchGlass', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
-    } else if (heldTool === 'forceps') {
-      const { rootsInForceps, setStates, showWrongAction } = useStore.getState();
-      if (rootsInForceps) {
-        setStates({ rootsInForceps: false, rootsInWatchGlass: true });
-        showWrongAction('Root tips placed in Watch Glass.');
-      } else if (rootsInWatchGlass) {
-        setStates({ rootsInForceps: true, rootsInWatchGlass: false });
-        showWrongAction('Root tips picked up from Watch Glass.');
+      return;
+    }
+
+    // Step-based logic requested in the exact code 
+    if (!heldTool) {
+        setHeldTool('watchGlass');
+    } else if (heldTool === 'scalpel') {
+        const { onionPlacedOn, rootGrowthCompleted, onionRootsState, setStates, isCutting } = useStore.getState();
+        if (onionPlacedOn === 'watchGlass' && !isCutting && onionRootsState !== 'CUT_DRY' && onionRootsState !== 'CUT_FRESH') {
+            setStates({ isCutting: true, cutStartTime: Date.now() });
+        }
+    } else if (currentStep === STEPS.TREATMENT && heldTool === 'dropper') {
+      if (!acidAdded) {
+        setStates({ acidAdded: true });
+      } else if (!stainAdded) {
+        setStates({ stainAdded: true });
+        setHeldTool(null);
       }
-    } else if (!heldTool) {
-      setHeldTool('watchGlass');
+    } else if (heldTool === 'forceps' && watchGlassRootCount > 0 && !rootPicked) {
+      setStates({ 
+        rootPicked: true, 
+        watchGlassRootCount: watchGlassRootCount - 1,
+        rootTipsInWatchGlass: (watchGlassRootCount - 1) > 0
+      });
     }
   };
 
-  const showHighlight = (heldTool === 'forceps') || (heldTool === 'onion') || isHeld;
-
-  const liquidColor = '#b3d9f5';
+  const liquidColor = stainAdded ? '#c62828' : '#b3d9f5';
 
   return (
-    <group ref={groupRef} position={initialPosition} onClick={handleInteraction}
-      onPointerOver={() => { 
-        if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+    <group
+      ref={groupRef}
+      onPointerDown={handleInteraction}
+      onPointerOver={() => {
+        if (!heldTool || isHeld) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer';
+        setStates({ hoveredComponent: 'watchGlass' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
+      {/* Pulsing highlight ring */}
       {showHighlight && (
         <group position={[0, 0.01, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.19, 0.006, 16, 64]} />
             <meshBasicMaterial color="#00e5ff" transparent opacity={0.55} />
           </mesh>
+          {/* Outer soft glow ring */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.22, 0.012, 16, 64]} />
+            <meshBasicMaterial color="#00e5ff" transparent opacity={0.15} />
+          </mesh>
         </group>
       )}
 
-      <mesh position={[0, -0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[0.155, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.12} />
-      </mesh>
+      <group position={[0, 0.5, 0]}>
+        {/* === SHADOW / BASE CONTACT SHADOW === */}
+        <mesh position={[0, -0.499, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[0.08, 64]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.15} />
+        </mesh>
 
-      <mesh position={[0, 0, 0]} rotation={[Math.PI, 0, 0]} castShadow receiveShadow>
-        <sphereGeometry args={[0.155, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
-        <meshPhysicalMaterial 
-          side={THREE.DoubleSide} transparent opacity={0.25} roughness={0.0}
-          transmission={0.99} thickness={2.0} color="#ffffff" ior={1.52}
-          clearcoat={1.0} clearcoatRoughness={0.01} specularIntensity={4.8} 
-          envMapIntensity={5.0} emissive="#ffffff" emissiveIntensity={0.02}
-        />
-      </mesh>
+        {/* === MAIN GLASS DISH (Flatter Saucer Style - Large) === */}
+        <mesh rotation={[Math.PI, 0, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[0.5, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.08]} />
+          <meshPhysicalMaterial
+            side={THREE.DoubleSide}
+            transparent
+            opacity={0.15}
+            roughness={0.0}
+            transmission={1.0}
+            thickness={2.0}
+            color="#e1f5fe"
+            ior={1.5}
+            clearcoat={1.0}
+            clearcoatRoughness={0.0}
+            specularIntensity={3.0}
+          />
+        </mesh>
 
-      <mesh position={[0, -0.003, 0]} rotation={[Math.PI, 0, 0]}>
-        <sphereGeometry args={[0.148, 128, 64, 0, Math.PI * 2, 0, Math.PI * 0.36]} />
-        <meshPhysicalMaterial 
-          side={THREE.BackSide} transparent opacity={0.15}
-          roughness={0.0} transmission={1.0} thickness={1.0} color="#ffffff"
-          ior={1.52} clearcoat={1.0} envMapIntensity={4.0} 
-        />
-      </mesh>
+        {/* === BLUE GLASS EDGE (Large) === */}
+        {/* Rim is at radius * cos(0.08PI) = 0.5 * 0.968 = 0.484 from the sphere center. */}
+        <mesh position={[0, -0.484, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.125, 0.002, 16, 128]} />
+          <meshStandardMaterial 
+            color="#00e5ff" 
+            emissive="#00b0ff"
+            emissiveIntensity={0.7}
+            transparent 
+            opacity={0.8} 
+          />
+        </mesh>
 
-      <mesh position={[0, -0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.1385, 0.0155, 32, 128]} />
-        <meshPhysicalMaterial transparent opacity={0.55} roughness={0.0}
-          transmission={0.85} thickness={0.06} color="#ffffff" ior={1.52}
-          clearcoat={1.0} specularIntensity={2.5} envMapIntensity={3.5} />
-      </mesh>
+        {/* === LIQUID (Shallow - Large) === */}
+        {(acidAdded || stainAdded) && (
+          <group position={[0, -0.493, 0]}>
+            <mesh receiveShadow>
+              <cylinderGeometry args={[0.09, 0.09, 0.005, 64]} />
+              <meshPhysicalMaterial
+                color={liquidColor}
+                transmission={0.5}
+                transparent
+                opacity={stainAdded ? 0.8 : 0.6}
+                roughness={0.0}
+              />
+            </mesh>
+          </group>
+        )}
 
-      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.1385, 0.003, 16, 128]} />
-        <meshStandardMaterial color="#ffffff" emissive="#e8f4fb" emissiveIntensity={0.9}
-          transparent opacity={0.85} />
-      </mesh>
+        {/* === ROOT TIPS (Large area) === */}
+        {watchGlassRootCount > 0 && (
+          <group position={[0, -0.49, 0]}>
+            {[...Array(watchGlassRootCount)].map((_, i) => {
+              const angle = (i / 8) * Math.PI * 2 + i * 0.3;
+              const r = 0.04 + (i % 3) * 0.035;
+              return (
+                <mesh
+                  key={i}
+                  position={[Math.cos(angle) * r, 0, Math.sin(angle) * r]}
+                  rotation={[Math.PI / 2 + (Math.random() - 0.5) * 0.4, i * 0.8, 0]}
+                >
+                  <cylinderGeometry args={[0.0022, 0.0012, 0.025, 8]} />
+                  <meshStandardMaterial
+                    color={stainAdded ? '#e57373' : '#f0e6c8'}
+                    roughness={0.6}
+                  />
+                </mesh>
+              );
+            })}
+          </group>
+        )}
+      </group>
 
-      <mesh position={[0, -0.009, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.125, 64]} />
-        <meshPhysicalMaterial transparent opacity={0.08} roughness={0.0}
-          transmission={0.98} thickness={0.02} color="#e8f4fb" ior={1.52}
-          clearcoat={1.0} envMapIntensity={1.5} />
-      </mesh>
-
-      {rootsInWatchGlass && (
-        <group position={[0, -0.002, 0]}>
-          {[...Array(6)].map((_, i) => {
-            const angle = (i / 6) * Math.PI * 2 + i * 0.3;
-            const r = 0.04 + (i % 3) * 0.025;
-            return (
-              <mesh key={i}
-                position={[Math.cos(angle) * r, 0, Math.sin(angle) * r]}
-                rotation={[Math.PI / 2 + (Math.random() - 0.5) * 0.4, i * 0.8, 0]}
-              >
-                <cylinderGeometry args={[0.0018, 0.001, 0.022, 8]} />
-                <meshStandardMaterial color="#f0e6c8" roughness={0.6} />
-              </mesh>
-            );
-          })}
-        </group>
-      )}
-
-      <mesh position={[0, 0.0, 0]}>
-        <cylinderGeometry args={[0.2, 0.2, 0.1, 16]} />
+      {/* Invisible hit area (Thin disk to allow interacting with placed Onion) */}
+      <mesh position={[0, -0.01, 0]}>
+        <cylinderGeometry args={[0.5, 0.5, 0.05, 16]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>

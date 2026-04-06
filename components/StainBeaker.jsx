@@ -33,6 +33,7 @@ const StainBeaker = ({ position: initialPosition = [-1.5, 0.93, 0.1] }) => {
       setHeldTool(null);
     } else if (heldTool === 'dropper') {
       setStates({ dropperContents: 'STAIN' });
+      useStore.getState().showWrongAction('Dropper filled with Aceto-orcein Stain');
     } else if (!heldTool) {
       setHeldTool('stainBeaker');
     }

@@ -160,7 +160,7 @@ function Scene() {
 
       <OrbitControls
         enabled={!microscopeZoomed}
-        enableRotate={!heldTool}
+        enableRotate={!heldTool && !useStore.getState().cameraLocked}
         makeDefault
         minPolarAngle={Math.PI / 4}
         maxPolarAngle={Math.PI / 2.2}
@@ -227,9 +227,12 @@ export default function Simulation() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <LeftPanel />
 
-        <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        <div 
+          style={{ flex: 1, position: 'relative', minWidth: 0 }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
           <ErrorBoundary>
-            <Canvas shadows onPointerMissed={() => useStore.getState().setHeldTool(null)}>
+            <Canvas shadows>
               <Scene />
             </Canvas>
           </ErrorBoundary>

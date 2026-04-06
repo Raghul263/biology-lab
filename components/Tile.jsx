@@ -28,25 +28,43 @@ const Tile = ({ position: initialPosition = [0, 0.93, 0.3] }) => {
 
   const handleClick = (e) => {
     e.stopPropagation();
+
     if (isHeld) {
+      // Fix in place wherever dropped
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('tile', [pos.x, 0.93, pos.z]);
+      useStore.getState().setPlaced('tile', true);
       setHeldTool(null);
     } else if (heldTool === 'onion') {
         const { setStates } = useStore.getState();
         setStates({ onionPlacedOn: 'tile' });
         setHeldTool(null);
     } else if (!heldTool) {
+      // Pick up the tile freely
       setHeldTool('tile');
     }
+  };
+
+  const handleContextMenu = (e) => {
+    e.nativeEvent.preventDefault();
+    e.stopPropagation();
+    // Removed old right-click unlock logic. Tile moves purely by clicking and dragging now.
   };
 
   const showHighlight = isHeld || !heldTool || heldTool === 'onion';
 
   return (
-    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
-      onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+    <group ref={groupRef} position={initialPosition} 
+      onPointerDown={handleClick}
+      onContextMenu={handleContextMenu}
+      onPointerOver={() => { 
+        if (!isHeld) document.body.style.cursor = 'pointer'; 
+        useStore.getState().setStates({ hoveredComponent: 'tile' });
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        useStore.getState().setStates({ hoveredComponent: null });
+      }}
     >
       {showHighlight && (
         <group position={[0, 0.03, 0]}>
@@ -61,7 +79,7 @@ const Tile = ({ position: initialPosition = [0, 0.93, 0.3] }) => {
         <meshStandardMaterial color="#34495e" roughness={0.4} metalness={0.1} />
       </mesh>
       <mesh position={[0, 0.05, 0]}>
-        <boxGeometry args={[0.8, 0.1, 0.8]} />
+        <boxGeometry args={[0.55, 0.1, 0.55]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
     </group>

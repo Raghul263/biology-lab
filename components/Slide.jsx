@@ -71,16 +71,16 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
   };
 
   // Determine fluid visual state based on drops and evaporation
-  const hasHcl = slideFluids.includes('HCL');
   const hasStain = slideFluids.includes('STAIN');
   const hasWater = slideFluids.includes('WATER');
+  const { rootProcessingState } = useStore.getState();
   
   // Calculate evaporation based on slideHeatedTime
-  const heatDecay = Math.max(0, 1 - (slideHeatedTime / 20)); // Fades out over 20 seconds of heat
+  const heatDecay = Math.max(0, 1 - (slideHeatedTime / 300)); 
 
   return (
     <group ref={groupRef} position={initialPosition}
-      onClick={handleInteraction}
+      onPointerDown={handleInteraction}
       onPointerOver={() => {
         if (isHeld) document.body.style.cursor = 'grabbing';
         else if (squashed) document.body.style.cursor = 'grab';
@@ -88,21 +88,22 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
       }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
+      {/* 🟦 THE SLIDE */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[0.4, 0.005, 0.15]} />
-        <meshPhysicalMaterial color="#e1f5fe" transparent transmission={1.0}
+        <meshPhysicalMaterial color="#ffffff" transparent transmission={1.0}
           thickness={0.05} roughness={0.02} ior={1.5} clearcoat={1} />
       </mesh>
 
-      {/* Fluids layer */}
-      {slideFluids.length > 0 && heatDecay > 0 && (
+      {/* 💧 FLUIDS LAYER */}
+      {slideFluids.length > 0 && (
          <group position={[0, 0.003, 0]}>
            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-             <circleGeometry args={[0.04 * (1 + slideFluids.length * 0.2), 32]} />
+             <circleGeometry args={[0.045, 32]} />
              <meshPhysicalMaterial 
-               color={hasStain ? "#d32f2f" : hasWater ? "#4fc3f7" : "#e0f7fa"}
+               color={hasStain ? "#c62828" : "#81d4fa"}
                transparent 
-               opacity={(hasStain ? 0.8 : 0.4) * heatDecay} 
+               opacity={squashed ? 0.2 : (hasStain ? 0.8 : 0.5) * heatDecay} 
                transmission={0.9} 
                roughness={0.0} 
                ior={1.33}
@@ -111,20 +112,27 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
          </group>
       )}
 
-      {/* Root Layer */}
+      {/* 🧬 ROOT LAYER */}
       {rootOnSlide && (
         <group position={[0, 0.004, 0]}>
-          <mesh scale={squashed ? [2, 0.2, 2] : [1, 1, 1]}>
-            <cylinderGeometry args={[0.005, 0.005, 0.02, 16]} />
-            <meshStandardMaterial color={hasStain ? "#b71c1c" : "#fdf5e6"} />
+          <mesh 
+            scale={squashed ? [2.5, 0.05, 2.5] : [1, 1, 1]}
+            position={[0, squashed ? -0.001 : 0, 0]}
+          >
+            <cylinderGeometry args={[0.005, 0.006, 0.02, 16]} />
+            <meshStandardMaterial 
+              color={rootProcessingState === 'STAINED' || hasStain ? "#880e4f" : (rootProcessingState === 'MACERATED' ? "#f0f4c3" : "#f0e6c8")} 
+              transparent={squashed}
+              opacity={squashed ? 0.6 : 1.0}
+            />
           </mesh>
         </group>
       )}
       
-      {/* Cover Slip */}
+      {/* 🔲 COVER SLIP */}
       {coverSlipPlaced && (
         <mesh position={[0, squashed ? 0.005 : 0.008, 0]} castShadow receiveShadow>
-          <boxGeometry args={[0.1, 0.001, 0.1]} />
+          <boxGeometry args={[0.12, 0.001, 0.12]} />
           <meshPhysicalMaterial color="#ffffff" transparent transmission={1.0} thickness={0.01} roughness={0.01} ior={1.5} />
         </mesh>
       )}

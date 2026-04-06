@@ -41,11 +41,16 @@ const Beaker = ({ position: initialPosition = [-1.2, 0.93, -0.3] }) => {
   const showHighlight = heldTool === 'dropper' || isHeld;
 
   return (
-    <group ref={groupRef} position={initialPosition} onPointerDown={handleClick}
+    <group ref={groupRef} position={initialPosition} 
+      onPointerDown={handleClick}
       onPointerOver={() => { 
         if (showHighlight || !heldTool) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; 
+        useStore.getState().setStates({ hoveredComponent: 'waterBeaker' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        useStore.getState().setStates({ hoveredComponent: null });
+      }}
     >
       {showHighlight && (
         <group position={[0, 0.28, 0]}>

@@ -8,7 +8,7 @@ import useStore from '../lib/store';
  * Features: Dark handle, joined back, pointed tips, visible roots.
  */
 const Forceps = ({ position = [0, 0, 0] }) => {
-  const { heldTool, setHeldTool, rootsInForceps } = useStore();
+  const { heldTool, setHeldTool, rootsInForceps, rootPicked, setStates } = useStore();
   const groupRef = useRef();
   const isHeld = heldTool === 'forceps';
   const { raycaster } = useThree();
@@ -21,23 +21,72 @@ const Forceps = ({ position = [0, 0, 0] }) => {
       if (intersection) {
         intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
         intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
-        groupRef.current.position.set(intersection.x, 0.952, intersection.z);
+        groupRef.current.position.set(intersection.x, 1.1, intersection.z); // Elevated for clearance
         groupRef.current.rotation.set(0, -Math.PI / 4, 0);
       }
-    } else if (!isHeld && groupRef.current && position) {
-      groupRef.current.position.set(...position);
+    } else if (!isHeld && groupRef.current) {
+      const { setupPositions } = useStore.getState();
+      const pos = setupPositions['forceps'] || position;
+      groupRef.current.position.set(pos[0], pos[1], pos[2]);
       groupRef.current.rotation.set(0, 0, 0);
     }
   });
 
+  // SMART SWAPPING: Auto-drop if user picks up a different tool
+  const prevHeld = useRef(heldTool);
+  React.useEffect(() => {
+    if (prevHeld.current === 'forceps' && heldTool !== 'forceps' && groupRef.current) {
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
+      setStates({ forcepsReady: true });
+    }
+    prevHeld.current = heldTool;
+  }, [heldTool]);
+
   const handleClick = (e) => {
+    e.stopPropagation();
+    const { hoveredComponent, watchGlassRootCount, vialCapOpen, setStates } = useStore.getState();
+
+    if (isHeld) {
+      // 🧠 SMART TOOL ACTION PRIORITIZATION
+      if (hoveredComponent === 'watchGlass' && !rootPicked && watchGlassRootCount > 0) {
+        // ACTION: Pick up root (DO NOT DROP TOOL)
+        setStates({ 
+          rootPicked: true, 
+          watchGlassRootCount: watchGlassRootCount - 1,
+          rootTipsInWatchGlass: (watchGlassRootCount - 1) > 0
+        });
+        return;
+      }
+
+      if (hoveredComponent === 'vial' && rootPicked && vialCapOpen) {
+        // ACTION: Drop root AND drop tool (Fix position)
+        setStates({ rootInVial: true, rootPicked: false });
+        const pos = groupRef.current.position;
+        useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
+        setHeldTool(null);
+        setStates({ forcepsReady: true });
+        return;
+      }
+
+      // DEFAULT: Fix position (Drop tool)
+      const pos = groupRef.current.position;
+      useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
+      setHeldTool(null);
+      setStates({ forcepsReady: true });
+    } else {
+      setHeldTool('forceps');
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    e.nativeEvent.preventDefault();
     e.stopPropagation();
     if (isHeld) {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
-    } else {
-      if (!heldTool) setHeldTool('forceps');
+      setStates({ forcepsReady: true });
     }
   };
 
@@ -65,23 +114,39 @@ const Forceps = ({ position = [0, 0, 0] }) => {
     <group 
       ref={groupRef} 
       onPointerDown={handleClick}
-      onPointerOver={() => (document.body.style.cursor = 'pointer')}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onContextMenu={handleContextMenu}
+      onPointerOver={() => { 
+        if (!isHeld) {
+            document.body.style.cursor = 'pointer'; 
+            setStates({ hoveredComponent: 'forceps' });
+        }
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
-      {/* Interaction Highlight */}
-      {showHighlight && (
-        <group position={[0.07, 0.02, 0]}>
-          <mesh rotation={[-Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.08, 0.005, 16, 32]} />
-            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
-          </mesh>
-        </group>
+      {/* 🔴 INTERACTION ZONE: While held, this captures the user's "Fix" click anywhere on the table */}
+      {isHeld && (
+        <mesh 
+          position={[0, 0, 0]} 
+          onPointerDown={handleClick}
+          onPointerOver={() => { document.body.style.cursor = 'cell'; }}
+        >
+          <planeGeometry args={[2.0, 2.0]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
       )}
 
-      {/* Forceps Body (Tweezers Style) */}
-      <group rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 1]}>
+      {/* Forceps Body (Tweezers Style) - POINTER EVENTS NONE when held so we can click targets UNDERNEATH */}
+      <group 
+        rotation={[Math.PI / 2, 0, 0]} 
+        scale={[1, 1, 1]}
+        pointerEvents={isHeld ? "none" : "auto"}
+        position={[-0.1, 0, 0]} 
+      >
         
-        {/* Back Joint (where they are joined) */}
+        {/* Back Joint */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.005, 0.016, 0.006]} />
           <meshStandardMaterial color="#37474f" roughness={0.4} metalness={0.7} />
@@ -93,7 +158,7 @@ const Forceps = ({ position = [0, 0, 0] }) => {
             <extrudeGeometry args={[armShape, extrudeSettings]} />
             <meshStandardMaterial color="#263238" roughness={0.6} metalness={0.5} />
           </mesh>
-          {/* Grip Ridges (Serrated) */}
+          {/* Grip Ridges */}
           {[...Array(12)].map((_, i) => (
             <mesh key={i} position={[0.04 + (i * 0.004), 0.004, 0.001]} castShadow>
               <boxGeometry args={[0.002, 0.002, 0.008]} />
@@ -108,7 +173,7 @@ const Forceps = ({ position = [0, 0, 0] }) => {
             <extrudeGeometry args={[armShape, extrudeSettings]} />
             <meshStandardMaterial color="#263238" roughness={0.6} metalness={0.5} />
           </mesh>
-          {/* Grip Ridges (Serrated) */}
+          {/* Grip Ridges */}
           {[...Array(12)].map((_, i) => (
             <mesh key={i} position={[0.04 + (i * 0.004), 0.004, 0.001]} castShadow>
               <boxGeometry args={[0.002, 0.002, 0.008]} />
@@ -117,27 +182,29 @@ const Forceps = ({ position = [0, 0, 0] }) => {
           ))}
         </group>
 
-        {/* Carried Roots (Clearly visible at the tip) */}
-        {rootsInForceps && (
+        {/* Carried Root (One at a time) */}
+        {rootPicked && (
           <group position={[0.155, 0, 0.003]}>
-            {[...Array(3)].map((_, i) => (
-              <mesh key={i}
-                position={[(Math.random()-0.5)*0.01, 0, (Math.random()-0.5)*0.005]}
-                rotation={[Math.PI / 2, Math.random() * Math.PI, 0]}
-              >
-                {/* Brighter, clearly visible roots */}
-                <cylinderGeometry args={[0.004, 0.004, 0.02, 8]} />
-                <meshStandardMaterial color="#ffecb3" emissive="#fff176" emissiveIntensity={0.4} />
-              </mesh>
-            ))}
+            <mesh 
+              position={[0, 0, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+            >
+              <cylinderGeometry args={[0.004, 0.004, 0.02, 8]} />
+              <meshStandardMaterial color="#ffecb3" emissive="#fff176" emissiveIntensity={0.4} />
+            </mesh>
           </group>
         )}
       </group>
-      {/* Expanded Grab Trigger (Invisible) - Centered on Handle Area */}
+
+      {/* 🟢 MASSIVE Grab Trigger (Transparent) - Ensures mouse can always 'catch' the tool */}
       {!isHeld && (
-        <mesh visible={false} position={[0.07, 0, 0]}>
-          <boxGeometry args={[0.2, 0.05, 0.2]} />
-          <meshBasicMaterial transparent opacity={0} />
+        <mesh 
+          position={[0.07, 0, 0]}
+          onPointerDown={handleClick}
+          onContextMenu={handleContextMenu}
+        >
+          <boxGeometry args={[0.4, 0.15, 0.25]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
     </group>

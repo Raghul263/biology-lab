@@ -29,18 +29,28 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
 
     if (flameRef.current && flameOn) {
       const t = state.clock.elapsedTime;
-      flameRef.current.rotation.z = Math.sin(t * 10) * 0.05 + Math.sin(t * 2.5) * 0.02;
-      flameRef.current.rotation.x = Math.cos(t * 8) * 0.03;
-      const s = 1 + Math.sin(t * 25) * 0.1;
-      const pulse = 1 + Math.sin(t * 50) * 0.05;
-      flameRef.current.scale.set(s, pulse, s);
-      flameRef.current.rotation.y += 0.05;
-      flameRef.current.children.forEach((child, i) => {
-        if (child.type === 'Mesh') {
-          child.position.x = Math.sin(t * (20 + i)) * 0.002;
-          child.position.z = Math.cos(t * (22 + i)) * 0.002;
+      // ... existing flicker animation ...
+      
+      // 🔥 HEATING LOGIC
+      const store = useStore.getState();
+      if (heldTool === 'watchGlass' && groupRef.current) {
+        const wgPos = store.setupPositions['watchGlass'] || [0.35, 0.93, -0.2];
+        const burnerPos = groupRef.current.position;
+        const dist = Math.hypot(wgPos[0] - burnerPos.x, wgPos[2] - burnerPos.z);
+        
+        if (dist < 0.2) {
+          const newTime = (store.watchGlassHeatedTime || 0) + 1;
+          const updates = { watchGlassHeatedTime: newTime };
+          
+          if (store.watchGlassFluid === 'HCL' && newTime > 150) {
+            updates.rootProcessingState = 'MACERATED';
+          } else if (store.watchGlassFluid === 'STAIN' && newTime > 300) {
+            updates.rootProcessingState = 'STAINED';
+          }
+          
+          setStates(updates);
         }
-      });
+      }
     }
   });
 

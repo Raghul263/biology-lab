@@ -174,7 +174,7 @@ const LabRoom = () => {
                         store.showWrongAction("Onion fixed to Cutting Tile");
                         setHeldTool(null);
                         return;
-                    } else if (Math.abs(point.x - beakerPos[0]) < 0.3 && Math.abs(point.z - beakerPos[2]) < 0.3) {
+                    } else if (Math.abs(point.x - beakerPos[0]) < 0.4 && Math.abs(point.z - beakerPos[2]) < 0.4) {
                         store.setStates({ onionPlacedOn: 'waterBeaker' });
                         store.showWrongAction("Onion placed in Water Beaker");
                         setHeldTool(null);
@@ -194,8 +194,10 @@ const LabRoom = () => {
                 const safeZ = Math.max(-0.8, Math.min(0.8, point.z));
                 const y = heldTool === 'microscope' ? 1.0 : 0.93;
                 
+                // FIXED: Use the exact click point for better feedback
                 setSetupPosition(heldTool, [safeX, y, safeZ]);
                 setHeldTool(null);
+                return;
               }
             }
           }}

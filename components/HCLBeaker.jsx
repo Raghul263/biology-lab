@@ -33,6 +33,7 @@ const HCLBeaker = ({ position: initialPosition = [-1.5, 0.93, -0.3] }) => {
       setHeldTool(null);
     } else if (heldTool === 'dropper') {
       setStates({ dropperContents: 'HCL' });
+      useStore.getState().showWrongAction('Dropper filled with 1M HCl');
     } else if (!heldTool) {
       setHeldTool('hclBeaker');
     }
