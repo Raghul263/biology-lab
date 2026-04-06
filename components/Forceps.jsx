@@ -69,6 +69,16 @@ const Forceps = ({ position = [0, 0, 0] }) => {
         return;
       }
 
+      if (hoveredComponent === 'slide' && rootPicked) {
+        // ACTION: Drop root on slide AND drop tool
+        setStates({ rootOnSlide: true, rootPicked: false });
+        const pos = groupRef.current.position;
+        useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);
+        setHeldTool(null);
+        setStates({ forcepsReady: true });
+        return;
+      }
+
       // DEFAULT: Fix position (Drop tool)
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('forceps', [pos.x, 0.93, pos.z]);

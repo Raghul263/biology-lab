@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import useStore from '../lib/store';
 import * as THREE from 'three';
@@ -14,6 +14,16 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
+  const [rootFalling, setRootFalling] = useState(false);
+  const rootY = useRef(0.2);
+
+  useEffect(() => {
+    if (rootOnSlide && !squashed) {
+      rootY.current = 0.2;
+      setRootFalling(true);
+    }
+  }, [rootOnSlide]);
+
   useFrame((state, delta) => {
     if (isHeld && groupRef.current) {
       const intersection = new THREE.Vector3();
@@ -25,6 +35,14 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
       }
     } else if (!isHeld && groupRef.current && initialPosition) {
         groupRef.current.position.set(...initialPosition);
+    }
+
+    if (rootFalling) {
+      rootY.current -= delta * 0.8;
+      if (rootY.current <= 0) {
+        rootY.current = 0;
+        setRootFalling(false);
+      }
     }
   });
 
@@ -48,8 +66,8 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
 
     const state = useStore.getState();
 
-    if (heldTool === 'forceps' && state.rootsInForceps) {
-      setStates({ rootOnSlide: true, rootsInForceps: false });
+    if (heldTool === 'forceps' && (state.rootsInForceps || state.rootPicked)) {
+      setStates({ rootOnSlide: true, rootsInForceps: false, rootPicked: false });
       setHeldTool(null);
     } else if (heldTool === 'dropper' && dropperContents) {
       const newFluids = [...slideFluids, dropperContents];
@@ -85,8 +103,12 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
         if (isHeld) document.body.style.cursor = 'grabbing';
         else if (squashed) document.body.style.cursor = 'grab';
         else document.body.style.cursor = 'pointer';
+        setStates({ hoveredComponent: 'slide' });
       }}
-      onPointerOut={() => (document.body.style.cursor = 'auto')}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto';
+        setStates({ hoveredComponent: null });
+      }}
     >
       {/* 🟦 THE SLIDE */}
       <mesh castShadow receiveShadow>
@@ -114,7 +136,7 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
 
       {/* 🧬 ROOT LAYER */}
       {rootOnSlide && (
-        <group position={[0, 0.004, 0]}>
+        <group position={[0, rootFalling ? rootY.current : 0.004, 0]}>
           <mesh 
             scale={squashed ? [2.5, 0.05, 2.5] : [1, 1, 1]}
             position={[0, squashed ? -0.001 : 0, 0]}
