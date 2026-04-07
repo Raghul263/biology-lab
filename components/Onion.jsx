@@ -322,11 +322,7 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
     } else if (closestTarget === 'watchGlass') {
       setStates({ onionPlacedOn: 'watchGlass' });
     } else {
-      if (useStore.getState().rootGrowthCompleted) {
-        setStates({ onionPlacedOn: null, onionFinalPlaced: true });
-      } else {
-        setStates({ onionPlacedOn: null });
-      }
+      setStates({ onionPlacedOn: null });
       useStore.getState().setSetupPosition('onion', [pos.x, 0.93, pos.z]);
     }
     setHeldTool(null);
@@ -335,8 +331,6 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
   const handlePointerDown = (e) => {
     e.stopPropagation();
     
-    if (useStore.getState().onionFinalPlaced) return;
-
     // ALLOW LEFT CLICK TO FIX/DROP ONION
     if (isHeld) {
       handleDrop();
