@@ -106,7 +106,7 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
-      {heldTool === 'slide' && flameOn && (
+      {heldTool === 'slide' && burnerOn && (
         <group position={[0, 0.25, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.08, 0.005, 16, 32]} />

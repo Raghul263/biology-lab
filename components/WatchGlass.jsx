@@ -4,7 +4,11 @@ import { useThree, useFrame } from '@react-three/fiber';
 import useStore, { STEPS } from '../lib/store';
 
 const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
-  const { currentStep, heldTool, setHeldTool, setStates, rootTipsInWatchGlass, hclApplied, stainApplied, watchGlassRootCount, holdingRoot } = useStore();
+  const { 
+    currentStep, heldTool, setHeldTool, setStates, 
+    rootTipsInWatchGlass, watchGlassHclApplied, watchGlassStainApplied, watchGlassWaterApplied,
+    watchGlassRootCount, holdingRoot 
+  } = useStore();
 
   const isHeld = heldTool === 'watchGlass';
   const groupRef = useRef();
@@ -26,7 +30,7 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
     }
   });
 
-  const isTarget = currentStep === STEPS.TREATMENT && !(hclApplied && stainApplied);
+  const isTarget = currentStep === STEPS.TREATMENT && !(watchGlassHclApplied && watchGlassStainApplied);
   
   // Highlight when holding dropper, scalpel, or forceps (if ready to use)
   const isReadyToCut = useStore.getState().onionPlacedOn === 'watchGlass' && !useStore.getState().isCutting && useStore.getState().onionRootsState !== 'CUT_DRY' && useStore.getState().onionRootsState !== 'CUT_FRESH';
@@ -65,7 +69,8 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
     }
   };
 
-  const liquidColor = stainApplied ? '#c62828' : '#b3d9f5';
+  const liquidColor = watchGlassStainApplied ? '#c62828' : 
+                      watchGlassWaterApplied ? '#b3e5fc' : '#b3d9f5';
 
   return (
     <group
@@ -134,7 +139,7 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
         </mesh>
 
         {/* === LIQUID (Shallow - Large) === */}
-        {(hclApplied || stainApplied) && (
+        {(watchGlassHclApplied || watchGlassStainApplied || watchGlassWaterApplied) && (
           <group position={[0, -0.493, 0]}>
             <mesh receiveShadow>
               <cylinderGeometry args={[0.09, 0.09, 0.005, 64]} />
@@ -142,7 +147,7 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
                 color={liquidColor}
                 transmission={0.5}
                 transparent
-                opacity={stainApplied ? 0.8 : 0.6}
+                opacity={watchGlassStainApplied ? 0.8 : 0.6}
                 roughness={0.0}
               />
             </mesh>
@@ -163,7 +168,7 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
                 >
                   <cylinderGeometry args={[0.0022, 0.0012, 0.025, 8]} />
                   <meshStandardMaterial
-                    color={stainApplied ? '#e57373' : '#f0e6c8'}
+                    color={watchGlassStainApplied ? '#e57373' : '#f0e6c8'}
                     roughness={0.6}
                   />
                 </mesh>

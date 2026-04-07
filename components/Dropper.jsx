@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import useStore from '../lib/store';
 
 const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
-  const { heldTool, setHeldTool, dropperState, dropCount, setStates, hclApplied, stainApplied } = useStore();
+  const { heldTool, setHeldTool, dropperState, dropCount, setStates, hclApplied, stainApplied, slideWaterApplied, watchGlassWaterApplied } = useStore();
   const isHeld = heldTool === 'dropper';
   const meshRef = useRef();
   const [snappedTo, setSnappedTo] = useState(null); // null, 'hclBeaker', 'stainBeaker', 'slide'
@@ -28,7 +28,7 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
       raycaster.ray.intersectPlane(plane, intersection);
 
       // --- 🧠 AUTOMATIC RIM SNAP (ONLY TO RIM) ---
-      if (!snappedTo && hoveredComponent && ['hclBeaker', 'stainBeaker', 'slide'].includes(hoveredComponent)) {
+      if (!snappedTo && hoveredComponent && ['hclBeaker', 'stainBeaker', 'waterBeaker', 'slide', 'watchGlass'].includes(hoveredComponent)) {
          if (unlockTime <= 0) {
             setSnappedTo(hoveredComponent);
             setIsDipped(false);
@@ -39,21 +39,20 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
         let targetPos = [0, 0, 0];
         if (snappedTo === 'hclBeaker') targetPos = setupPositions['hclBeaker'] || [-1.5, 0.93, -0.3];
         if (snappedTo === 'stainBeaker') targetPos = setupPositions['stainBeaker'] || [-1.1, 0.93, -0.3];
+        if (snappedTo === 'waterBeaker') targetPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
         if (snappedTo === 'slide') targetPos = setupPositions['slide'] || [0, 0.93, 0.2];
+        if (snappedTo === 'watchGlass') targetPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
         
-        // --- 🧪 TWO-STAGE HEIGHT LOGIC (Rim: 0.28, Dipped: 0.08) ---
-        // Base Rim Height
+        // --- 🧪 TWO-STAGE HEIGHT LOGIC ---
         let baseHeight = (snappedTo === 'slide' ? 0.16 : 0.28); 
+        if (snappedTo === 'watchGlass') baseHeight = 0.22; // Slightly lower for watch glass
         
-        // 🧠 DIP-AND-RETURN ANIMATION: Dip into beaker when suction is active, then return
         let dipOffset = 0;
-        if (suctionTime > 0 && (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
-            // Dip down into acid (0.08) and back up using suctionTime curve
+        if (suctionTime > 0 && (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker' || snappedTo === 'waterBeaker')) {
             const curve = Math.sin(suctionTime * Math.PI); 
-            dipOffset = curve * -0.20; // 0.28 -> 0.08 -> 0.28
+            dipOffset = curve * -0.20; 
         }
         
-        // Final position
         const yOffset = baseHeight + dipOffset;
         meshRef.current.position.set(targetPos[0], 0.93 + yOffset, targetPos[2]);
       } else {
@@ -74,12 +73,10 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
     if (e && e.stopPropagation) e.stopPropagation();
     
     if (isHeld) {
-      // 🧠 MULTI-STAGE CLICK TO FIX
       if (snappedTo) {
-          // 🧠 DIRECT UNLOCK: One click releases the tool for free movement
           setSnappedTo(null);
           setIsDipped(false);
-          setUnlockTime(2.0); // Slightly longer cooldown for easier escape
+          setUnlockTime(2.0); 
           return;
       }
 
@@ -93,13 +90,14 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
 
       if (hoveredComponent === 'hclBeaker' || checkDist('hclBeaker', [-1.5, 0.93, -0.3])) {
         setSnappedTo('hclBeaker');
-        setIsDipped(false);
       } else if (hoveredComponent === 'stainBeaker' || checkDist('stainBeaker', [-1.1, 0.93, -0.3])) {
         setSnappedTo('stainBeaker');
-        setIsDipped(false);
+      } else if (hoveredComponent === 'waterBeaker' || checkDist('waterBeaker', [-1.2, 0.93, -0.3])) {
+        setSnappedTo('waterBeaker');
       } else if (hoveredComponent === 'slide' || checkDist('slide', [0, 0.93, 0.2])) {
         setSnappedTo('slide');
-        setIsDipped(false);
+      } else if (hoveredComponent === 'watchGlass' || checkDist('watchGlass', [1.0, 0.93, -0.1])) {
+        setSnappedTo('watchGlass');
       } else if (Math.pow(pos.x - initialPosition[0], 2) + Math.pow(pos.z - initialPosition[2], 2) < 0.1) {
         useStore.getState().setSetupPosition('dropper', initialPosition);
         setStates({ dropperState: null, dropCount: 0 });
@@ -117,24 +115,27 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (!isHeld) return;
 
-    // 🧠 REAL-TIME SYSTEM (Fill 3 drops | Drain 1 drop)
-    if (isDipped || (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
-        // FILLING FROM BEAKER (Auto-dip if clicked at rim)
+    if (isDipped || (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker' || snappedTo === 'waterBeaker')) {
         if (snappedTo === 'hclBeaker') setStates({ dropperState: 'HCL_LOADED', dropCount: 3 });
         if (snappedTo === 'stainBeaker') setStates({ dropperState: 'STAIN_LOADED', dropCount: 3 });
+        if (snappedTo === 'waterBeaker') setStates({ dropperState: 'WATER_LOADED', dropCount: 3 });
         setSuctionTime(1.0);
         setIsDipped(true); 
         return;
     }
 
     if (dropperState) {
-        // DRAINING (1 drop at a time)
         const nextCount = dropCount - 1;
-        setSuctionTime(1.0); // Trigger drain animation
+        setSuctionTime(1.0); 
 
         if (snappedTo === 'slide') {
-            if (dropperState === 'HCL_LOADED') setStates({ hclApplied: true, dropCount: nextCount });
-            if (dropperState === 'STAIN_LOADED') setStates({ stainApplied: true, dropCount: nextCount });
+            if (dropperState === 'HCL_LOADED') setStates({ slideHclApplied: true, dropCount: nextCount });
+            if (dropperState === 'STAIN_LOADED') setStates({ slideStainApplied: true, dropCount: nextCount });
+            if (dropperState === 'WATER_LOADED') setStates({ slideWaterApplied: true, dropCount: nextCount });
+        } else if (snappedTo === 'watchGlass') {
+            if (dropperState === 'HCL_LOADED') setStates({ watchGlassHclApplied: true, dropCount: nextCount });
+            if (dropperState === 'STAIN_LOADED') setStates({ watchGlassStainApplied: true, dropCount: nextCount });
+            if (dropperState === 'WATER_LOADED') setStates({ watchGlassWaterApplied: true, dropCount: nextCount });
         } else {
             setStates({ dropCount: nextCount });
         }
@@ -146,8 +147,9 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
     }
   };
 
-  const liquidColor = dropperState === 'HCL_LOADED' ? '#4fc3f7' :
-                      dropperState === 'STAIN_LOADED' ? '#e91e63' : null;
+    const liquidColor = dropperState === 'HCL_LOADED' ? '#4fc3f7' :
+                      dropperState === 'STAIN_LOADED' ? '#e91e63' : 
+                      dropperState === 'WATER_LOADED' ? '#81d4fa' : null;
 
   // Visual mapping: dropCount (3/3 is max height)
   const liquidLevel = (dropCount / 3) * 0.08;

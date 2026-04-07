@@ -189,8 +189,8 @@ const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
         </group>
       )}
 
-      {/* Completion Label */}
-      {fixationCompleted && (
+      {/* Completion Label (Only show when cap is open) */}
+      {fixationCompleted && vialCapOpen && (
         <group position={[0, 0.22, 0]}>
           <mesh>
             <boxGeometry args={[0.3, 0.06, 0.01]} />
