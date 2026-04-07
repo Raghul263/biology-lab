@@ -13,7 +13,7 @@ const CoverSlip = ({ position: initialPosition = [1.2, 0.93, 0.45] }) => {
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
   const canDrag = !coverSlipPlaced;
-
+ 
   useFrame(() => {
     if (isHeld && groupRef.current) {
       const intersection = new THREE.Vector3();
