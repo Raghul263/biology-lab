@@ -4,9 +4,8 @@ import { useThree, useFrame } from '@react-three/fiber';
 import useStore from '../lib/store';
 
 const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
-  const { heldTool, setStates, setHeldTool, slideHeatedTime } = useStore();
+  const { heldTool, setStates, setHeldTool, burnerOn } = useStore();
   const flameRef = useRef();
-  const [flameOn, setFlameOn] = useState(false);
 
   const isHeld = heldTool === 'burner';
   const groupRef = useRef();
@@ -29,7 +28,7 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       groupRef.current.position.set(...pos);
     }
 
-    if (flameRef.current && flameOn) {
+    if (flameRef.current && burnerOn) {
       const t = state.clock.elapsedTime;
       // Precise flicker
       flameRef.current.scale.set(
@@ -78,7 +77,7 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
 
   const toggleFlame = (e) => {
     if (e && e.stopPropagation) e.stopPropagation();
-    setFlameOn(!flameOn);
+    setStates({ burnerOn: !burnerOn });
   };
 
   const redMat = { color: "#d32f2f", roughness: 0.3, metalness: 0.7 };
@@ -107,11 +106,11 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       >
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 0.015, 16]} />
-          <meshStandardMaterial color={flameOn ? "#4caf50" : "#212121"} emissive={flameOn ? "#4caf50" : "#000000"} emissiveIntensity={0.5} />
+          <meshStandardMaterial color={burnerOn ? "#4caf50" : "#212121"} emissive={burnerOn ? "#4caf50" : "#000000"} emissiveIntensity={0.5} />
         </mesh>
         <mesh position={[0, 0, 0.01]}>
           <sphereGeometry args={[0.006, 16, 16]} />
-          <meshBasicMaterial color={flameOn ? "#4caf50" : "#f44336"} />
+          <meshBasicMaterial color={burnerOn ? "#4caf50" : "#f44336"} />
         </mesh>
       </group>
 
@@ -154,16 +153,16 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       </group>
 
       {/* 🔥 The Flame */}
-      {flameOn && (
+      {burnerOn && (
         <group position={[0, 0.27, 0]}>
           <group ref={flameRef}>
-            <mesh position={[0, 0.05, 0]}>
-              <cylinderGeometry args={[0.002, 0.012, 0.10, 12, 8, true]} />
+            <mesh position={[0, 0.005, 0]}>
+              <cylinderGeometry args={[0.002, 0.012, 0.02, 12, 2, true]} />
               <meshStandardMaterial color="#ff9800" transparent opacity={0.6} side={THREE.DoubleSide} 
                 emissive="#ff5722" emissiveIntensity={2.5} />
             </mesh>
-            <mesh position={[0, 0.015, 0]}>
-              <cylinderGeometry args={[0.006, 0.012, 0.03, 12, 1, true]} />
+            <mesh position={[0, 0.002, 0]}>
+              <cylinderGeometry args={[0.006, 0.012, 0.01, 12, 1, true]} />
               <meshStandardMaterial color="#00e5ff" transparent opacity={0.6} side={THREE.DoubleSide}
                 emissive="#00e5ff" emissiveIntensity={1.5} />
             </mesh>

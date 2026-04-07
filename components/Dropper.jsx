@@ -76,16 +76,11 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
     if (isHeld) {
       // 🧠 MULTI-STAGE CLICK TO FIX
       if (snappedTo) {
-         if (!isDipped && (snappedTo === 'hclBeaker' || snappedTo === 'stainBeaker')) {
-            // First Click -> DIP into liquid (FIX INSIDE)
-            setIsDipped(true);
-         } else {
-            // Second Click (or click on slide) -> UNLOCK (UNSNAP)
-            setSnappedTo(null);
-            setIsDipped(false);
-            setUnlockTime(1.5);
-         }
-         return;
+          // 🧠 DIRECT UNLOCK: One click releases the tool for free movement
+          setSnappedTo(null);
+          setIsDipped(false);
+          setUnlockTime(2.0); // Slightly longer cooldown for easier escape
+          return;
       }
 
       const { setupPositions, hoveredComponent } = useStore.getState();
