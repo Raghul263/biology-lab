@@ -199,9 +199,10 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
           <cylinderGeometry args={[0.02, 0.022, 0.01, 16]} />
           <meshStandardMaterial color="#c5a028" roughness={0.4} metalness={0.6} />
         </mesh>
+        {/* Burner Mouth (Clean Black Finish) */}
         <mesh position={[0, 0.205, 0]}>
-          <circleGeometry args={[0.02, 16]} rotation={[-Math.PI / 2, 0, 0]} />
-          <meshBasicMaterial color="#1a1a1a" />
+          <cylinderGeometry args={[0.018, 0.018, 0.002, 16]} />
+          <meshBasicMaterial color="#000000" />
         </mesh>
       </group>
 

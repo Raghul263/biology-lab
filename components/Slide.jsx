@@ -161,7 +161,7 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
       } else {
          // DROP NORMALLY
          const pos = groupRef.current.position;
-         useStore.getState().setSetupPosition('glassSlide', [pos.x, 0.93, pos.z]);
+         useStore.getState().setSetupPosition('slide', [pos.x, 0.93, pos.z]);
          setHeldTool(null);
       }
       return;
