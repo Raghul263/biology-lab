@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
 import useStore from '../lib/store';
 
 // UI Panels
@@ -118,6 +118,7 @@ function Scene() {
       <ambientLight intensity={0.7} />
       <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
       <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
+      <Environment preset="city" intensity={0.6} />
 
       {!microscopeZoomed && (
         <PerspectiveCamera makeDefault position={[0, 3.0, 4.5]} fov={38} rotation={[-Math.PI / 6, 0, 0]} />
