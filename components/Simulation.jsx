@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
 import useStore from '../lib/store';
 
 // UI Panels
@@ -118,6 +118,7 @@ function Scene() {
       <ambientLight intensity={0.7} />
       <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
       <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
+      <Environment preset="city" intensity={0.6} />
 
       {!microscopeZoomed && (
         <PerspectiveCamera makeDefault position={[0, 3.0, 4.5]} fov={38} rotation={[-Math.PI / 6, 0, 0]} />
@@ -150,6 +151,7 @@ function Scene() {
           {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [1.0, 0.93, -0.1])} />}
           {placedComponents.vial && <FixativeVial position={getPos('vial', [-0.8, 0.93, 0.4])} />}
           {placedComponents.dropper && <Dropper position={getPos('dropper', [-1.3, 0.93, 0.5])} />}
+          {placedComponents.burner && <Burner position={getPos('burner', [1.4, 0.93, 0.3])} />}
           {placedComponents.burner && <Burner position={getPos('burner', [1.4, 0.93, 0.3])} />}
           {placedComponents.slide && !slideOnMicroscope && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
           {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0.5, 0.93, 0.6])} />}

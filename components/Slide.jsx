@@ -6,7 +6,7 @@ import * as THREE from 'three';
 const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false }) => {
   const {
     rootOnSlide, slideFluids, slideHeatedTime, setStates, heldTool, setHeldTool,
-    coverSlipPlaced, squashed, dropperContents, slideOnMicroscope
+    coverSlipPlaced, squashed, dropperContents, slideOnMicroscope, isHeatingSlide, heatingXOffset
   } = useStore();
   
   const isHeld = heldTool === 'slide';
@@ -30,14 +30,37 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
   }, [isAttached]);
 
   useFrame((state, delta) => {
-    if (isAttached) return; // Skip all independent movement logic if parented
+    if (isAttached) return; 
     
+    const burnerPos = useStore.getState().setupPositions['burner'] || [1.4, 0.93, 0.3];
+
+    if (isHeatingSlide && groupRef.current) {
+        // 🔥 HEATING MODE: Follow cursor X-offset and LERP into position for smooth animation
+        const targetXOffset = state.mouse.x * 0.25;
+        const currentXOffset = THREE.MathUtils.lerp(heatingXOffset, targetXOffset, 10 * delta);
+        
+        setStates({ heatingXOffset: currentXOffset });
+        
+        // DESTINATION VECTOR (Burner gauze height)
+        const targetPos = new THREE.Vector3(burnerPos[0] + currentXOffset, burnerPos[1] + 0.428, burnerPos[2]);
+        groupRef.current.position.lerp(targetPos, 12 * delta); // Smoothly slide into place
+        groupRef.current.rotation.set(0, 0, 0);
+
+        // Progress heating while over the central flame area (approx radius 0.04)
+        if (Math.abs(currentXOffset) < 0.045 && useStore.getState().placedComponents.burner) {
+           setStates({ slideHeatedTime: slideHeatedTime +  1});
+        }
+        return; 
+    }
+
     if (isHeld && groupRef.current && !slideOnMicroscope) {
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
-      if (intersection) {
-        const cx = Math.max(-2.0, Math.min(2.0, intersection.x));
-        const cz = Math.max(-0.8, Math.min(0.8, intersection.z));
+      const rawX = intersection ? intersection.x : state.mouse.x * (state.viewport.width / 2);
+      const rawZ = intersection ? intersection.z : -state.mouse.y * (state.viewport.height / 2);
+      
+      const cx = Math.max(-2.2, Math.min(2.1, rawX));
+      const cz = Math.max(-0.9, Math.min(0.9, rawZ));
         
         const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
         const targetX = microPos[0];
@@ -61,7 +84,6 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
         } else {
             groupRef.current.position.set(cx, 0.93, cz);
         }
-      }
     } else if (settling && groupRef.current && targetPosRef.current) {
         // Settle animation: Interpolate position and rotation for a natural "snap"
         groupRef.current.position.lerp(new THREE.Vector3(...targetPosRef.current), 10 * delta);
@@ -127,13 +149,24 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
         return; 
     }
     
+    const state = useStore.getState();
     if (isHeld) {
-      // Just release - the useEffect above will handle the snapping if valid
-      setHeldTool(null);
+      const burnerPos = state.setupPositions['burner'] || [1.4, 0.93, 0.3];
+      const dist = Math.hypot(groupRef.current.position.x - burnerPos[0], groupRef.current.position.z - burnerPos[2]);
+      
+      if (dist < 0.25) {
+         // SNAP TO BURNER
+         setStates({ isHeatingSlide: true });
+         setHeldTool(null);
+      } else {
+         // DROP NORMALLY
+         const pos = groupRef.current.position;
+         useStore.getState().setSetupPosition('glassSlide', [pos.x, 0.93, pos.z]);
+         setHeldTool(null);
+      }
       return;
     }
 
-    const state = useStore.getState();
     // ... pick up logic continues ...
 
 
@@ -153,6 +186,10 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
     } else if (heldTool === 'needle' && coverSlipPlaced && !squashed) {
       setStates({ squashed: true });
       setHeldTool(null);
+    } else if (isHeatingSlide) {
+      // Pick up from burner
+      setStates({ isHeatingSlide: false });
+      setHeldTool('slide');
     } else if (!heldTool && !squashed) {
       // Pick up the slide if empty handed and not squashed yet
       setHeldTool('slide');
@@ -185,12 +222,37 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
         setStates({ hoveredComponent: null });
       }}
     >
-      {/* 🟦 THE SLIDE */}
-      <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.4, 0.005, 0.15]} />
-        <meshPhysicalMaterial color="#ffffff" transparent transmission={1.0}
-          thickness={0.05} roughness={0.02} ior={1.5} clearcoat={1} />
-      </mesh>
+      {/* 🟦 THE SLIDE (High-Fidelity Glass) */}
+      <group>
+        {/* Main Glass Body */}
+        <mesh castShadow receiveShadow position={[0.05, 0, 0]}>
+          <boxGeometry args={[0.3, 0.005, 0.15]} />
+          <meshPhysicalMaterial 
+            color="#e0f7fa" 
+            transparent 
+            transmission={1.0}
+            thickness={0.1} 
+            roughness={0.05} 
+            ior={1.52} 
+            clearcoat={1}
+            clearcoatRoughness={0.02}
+            attenuationDistance={0.5}
+            attenuationColor="#ffffff"
+          />
+        </mesh>
+        
+        {/* Frosted Label End */}
+        <mesh castShadow receiveShadow position={[-0.15, 0, 0]}>
+          <boxGeometry args={[0.1, 0.005, 0.15]} />
+          <meshPhysicalMaterial 
+            color="#ffffff" 
+            transparent 
+            opacity={0.4}
+            roughness={0.6}
+            metalness={0.1}
+          />
+        </mesh>
+      </group>
 
       {/* 💧 FLUIDS LAYER */}
       {slideFluids.length > 0 && (

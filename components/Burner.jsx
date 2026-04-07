@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useThree, useFrame } from '@react-three/fiber';
 import useStore from '../lib/store';
+import BurnerStand from './BurnerStand';
 
 const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
   const { heldTool, setStates, setHeldTool, slideHeatedTime } = useStore();
@@ -15,21 +16,42 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
 
   useFrame((state) => {
     if (isHeld && groupRef.current) {
-      const { raycaster: r } = state;
       const intersection = new THREE.Vector3();
-      r.ray.intersectPlane(plane, intersection);
-      if (intersection) {
-        intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
-        intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
-        groupRef.current.position.set(intersection.x, 0.93, intersection.z);
-      }
+      state.raycaster.ray.intersectPlane(plane, intersection);
+      
+      const targetX = intersection ? intersection.x : state.mouse.x * (state.viewport.width / 2);
+      const targetZ = intersection ? intersection.z : -state.mouse.y * (state.viewport.height / 2);
+
+      groupRef.current.position.set(
+        Math.max(-2.2, Math.min(2.2, targetX)),
+        0.93,
+        Math.max(-0.9, Math.min(0.9, targetZ))
+      );
     } else if (!isHeld && groupRef.current && initialPosition) {
       groupRef.current.position.set(...initialPosition);
     }
 
     if (flameRef.current && flameOn) {
       const t = state.clock.elapsedTime;
-      // ... existing flicker animation ...
+      // 🔥 ORGANIC FLAME ANIMATION (Multiple layers flickering at different speeds)
+      flameRef.current.children.forEach((child, i) => {
+        const offset = i * 0.5;
+        child.scale.y = 1 + Math.sin(t * (10 + i * 2) + offset) * 0.15;
+        child.scale.x = 1 + Math.cos(t * (8 + i) + offset) * 0.05;
+        child.rotation.z = Math.sin(t * (5 + i)) * 0.05;
+      });
+      
+      // Overall jitter
+      flameRef.current.position.x = Math.sin(t * 20) * 0.001;
+      flameRef.current.position.z = Math.cos(t * 18) * 0.001;
+      
+      // Pulsing lights
+      if (state.get().scene.getObjectByName('flamePointLight')) {
+        state.get().scene.getObjectByName('flamePointLight').intensity = 3 + Math.sin(t * 10) * 1.5;
+      }
+      if (state.get().scene.getObjectByName('flameInnerLight')) {
+        state.get().scene.getObjectByName('flameInnerLight').intensity = 0.4 + Math.sin(t * 20) * 0.2;
+      }
       
       // 🔥 HEATING LOGIC
       const store = useStore.getState();
@@ -60,7 +82,7 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       const pos = groupRef.current.position;
       useStore.getState().setSetupPosition('burner', [pos.x, 0.93, pos.z]);
       setHeldTool(null);
-    } else if (!heldTool) {
+    } else if (!heldTool && !useStore.getState().isHeatingSlide) {
       setHeldTool('burner');
     } else if (heldTool === 'slide' && flameOn) {
        setStates({ 
@@ -84,6 +106,16 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
       onPointerOver={() => { if (showHighlight) document.body.style.cursor = isHeld ? 'grabbing' : 'pointer'; }}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
+      {/* 🟦 PROXIMITY HIGHLIGHT (When slide is held nearby) */}
+      {(heldTool === 'slide') && (
+        <group position={[0, 0.42, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.13, 0.005, 16, 32]} />
+            <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
+          </mesh>
+        </group>
+      )}
+
       {heldTool === 'slide' && flameOn && (
         <group position={[0, 0.25, 0]}>
           <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -157,39 +189,66 @@ const Burner = ({ position: initialPosition = [0.7, 0.93, 0] }) => {
           <cylinderGeometry args={[0.015, 0.015, 0.18, 24]} />
           <meshStandardMaterial {...chromeMat} />
         </mesh>
-        <mesh position={[0, 0.19, 0]}>
-          <cylinderGeometry args={[0.018, 0.015, 0.01, 16, 1, true]} />
-          <meshStandardMaterial {...chromeMat} side={THREE.DoubleSide} />
+        
+        {/* Brass Cap (Upper Burner Cylinder) */}
+        <mesh position={[0, 0.185, 0]}>
+          <cylinderGeometry args={[0.022, 0.018, 0.03, 16]} />
+          <meshStandardMaterial color="#d4af37" roughness={0.3} metalness={0.7} />
         </mesh>
-        <mesh position={[0, 0.186, 0]}>
-          <circleGeometry args={[0.014, 16]} rotation={[-Math.PI / 2, 0, 0]} />
-          <meshBasicMaterial color="#000000" />
+        <mesh position={[0, 0.2, 0]}>
+          <cylinderGeometry args={[0.02, 0.022, 0.01, 16]} />
+          <meshStandardMaterial color="#c5a028" roughness={0.4} metalness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.205, 0]}>
+          <circleGeometry args={[0.02, 16]} rotation={[-Math.PI / 2, 0, 0]} />
+          <meshBasicMaterial color="#1a1a1a" />
         </mesh>
       </group>
 
       {flameOn && (
         <group position={[0, 0.27, 0]}>
           <group ref={flameRef}>
-            <mesh position={[0, 0.05, 0]}>
-              <cylinderGeometry args={[0.002, 0.012, 0.10, 12, 8, true]} />
-              <meshStandardMaterial color="#ff9800" transparent opacity={0.6} side={THREE.DoubleSide} 
-                emissive="#ff5722" emissiveIntensity={2.5} />
+            {/* Center Tongue */}
+            <mesh position={[0, 0.07, 0]}>
+              <cylinderGeometry args={[0, 0.014, 0.14, 16, 8, true]} />
+              <meshStandardMaterial color="#ffc107" transparent opacity={0.8} side={THREE.DoubleSide} 
+                emissive="#ff9800" emissiveIntensity={4} />
             </mesh>
-            <mesh position={[0, 0.04, 0]}>
-              <cylinderGeometry args={[0.001, 0.008, 0.08, 12, 8, true]} />
-              <meshStandardMaterial color="#ffeb3b" transparent opacity={0.8} side={THREE.DoubleSide}
-                emissive="#ffeb3b" emissiveIntensity={4} />
+            
+            {/* Left Tongue */}
+            <mesh position={[-0.008, 0.05, 0]} rotation={[0, 0, 0.2]}>
+              <cylinderGeometry args={[0, 0.01, 0.09, 16, 8, true]} />
+              <meshStandardMaterial color="#ff9800" transparent opacity={0.7} side={THREE.DoubleSide}
+                emissive="#ff5722" emissiveIntensity={3} />
             </mesh>
-            <mesh position={[0, 0.015, 0]}>
-              <cylinderGeometry args={[0.006, 0.012, 0.03, 12, 1, true]} />
-              <meshStandardMaterial color="#00e5ff" transparent opacity={0.6} side={THREE.DoubleSide}
-                emissive="#00e5ff" emissiveIntensity={1.5} />
+            
+            {/* Right Tongue */}
+            <mesh position={[0.008, 0.05, 0]} rotation={[0, 0, -0.2]}>
+              <cylinderGeometry args={[0, 0.01, 0.09, 16, 8, true]} />
+              <meshStandardMaterial color="#ff9800" transparent opacity={0.7} side={THREE.DoubleSide}
+                emissive="#ff5722" emissiveIntensity={3} />
+            </mesh>
+            
+            {/* Inner Core (Blue Inner Cone) */}
+            <mesh position={[0, 0.025, 0]}>
+              <cylinderGeometry args={[0.002, 0.008, 0.05, 12, 1, true]} />
+              <meshStandardMaterial color="#00e5ff" transparent opacity={0.9} side={THREE.DoubleSide}
+                emissive="#00e5ff" emissiveIntensity={5} />
+            </mesh>
+
+            {/* Subtle base glow */}
+            <mesh position={[0, 0.005, 0]}>
+              <sphereGeometry args={[0.015, 16, 16]} />
+              <meshBasicMaterial color="#00e5ff" transparent opacity={0.15} />
             </mesh>
           </group>
-          <pointLight color="#ff9800" intensity={4} distance={1.2} decay={2} castShadow />
-          <pointLight color="#00e5ff" intensity={0.5} distance={0.3} position={[0, -0.01, 0]} />
+          
+          <pointLight name="flamePointLight" color="#ff9800" intensity={4} distance={1.2} decay={2} castShadow />
+          <pointLight name="flameInnerLight" color="#00e5ff" intensity={0.6} distance={0.3} position={[0, -0.01, 0]} />
         </group>
       )}
+      
+      <BurnerStand position={[0, 0, 0]} />
     </group>
   );
 };
