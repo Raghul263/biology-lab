@@ -133,15 +133,16 @@ const MicroscopeUI = () => {
   }, []);
 
   const glassTextures = useMemo(() => {
-    return Array.from({ length: 15 }).map((_, i) => ({
-      left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, size: 1 + Math.random() * 3,
-      opacity: 0.05 + Math.random() * 0.15
+    return Array.from({ length: 28 }).map((_, i) => ({
+      left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%`, size: 0.5 + Math.random() * 2.5,
+      opacity: 0.03 + Math.random() * 0.12,
+      blur: Math.random() > 0.8 ? 1 : 0
     }));
   }, []);
 
   const selectedCellData = useStore(state => state.selectedCell);
   const hasStain = slideStainApplied;
-  const bgColor = hasStain ? 'rgb(244, 224, 234)' : 'rgba(251, 251, 245, 0.1)';
+  const bgColor = '#f5f5f5';
 
   if (!microscopeActive) return null;
 
@@ -180,17 +181,27 @@ const MicroscopeUI = () => {
         onClick={(e) => e.stopPropagation()}
       >
           <div style={{
-            width: '580px', height: '580px', borderRadius: '50%', overflow: 'hidden',
-            background: bgColor, border: '18px solid #1a1a1a', display: 'flex',
+            width: '600px', height: '600px', borderRadius: '50%', overflow: 'hidden',
+            background: bgColor, border: '24px solid #121212', display: 'flex',
             flexWrap: 'wrap', padding: '40px', justifyContent: 'center', alignItems: 'center',
-            boxShadow: `0 0 150px rgba(0,0,0,1.0), inset 0 0 120px rgba(0,0,0,${Math.max(0.4, 0.9 - light)})`, 
+            boxShadow: `
+                0 0 160px rgba(0,0,0,1.0), 
+                inset 0 0 80px rgba(0,0,0,0.9),
+                0 0 0 4px #2c2c2c,
+                0 0 0 10px #1a1a1a
+            `, 
             position: 'relative', transition: 'all 0.5s ease-out',
-            filter: `brightness(${light + 0.05}) contrast(1.1) saturate(1.2)`
+            filter: `brightness(${light}) contrast(1.1) saturate(1.2)`
           }}>
           
           {/* Glass imperfections / Organic Noise */}
           {glassTextures.map((t, i) => (
-            <div key={i} style={{ position: 'absolute', left: t.left, top: t.top, width: t.size, height: t.size, opacity: t.opacity, background: '#311b92', borderRadius: '50%', pointerEvents: 'none' }} />
+            <div key={i} style={{ 
+              position: 'absolute', left: t.left, top: t.top, 
+              width: t.size, height: t.size, opacity: t.opacity, 
+              background: '#2c3e50', borderRadius: '50%', pointerEvents: 'none',
+              filter: `blur(${t.blur}px)`
+            }} />
           ))}
 
           {/* VIEWPORT LAYERS */}
@@ -199,16 +210,51 @@ const MicroscopeUI = () => {
             display: 'flex', justifyContent: 'center', alignItems: 'center', 
             transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
           }}>
-             {/* 📸 HIGH-RES BIOLOGICAL IMAGE (MATCHES REFERENCE) */}
+             {/* 📸 ULTRA-HD BIOLOGICAL IMAGE - PHOTOREALISTIC OVERHAUL */}
              <div style={{
-               position: 'absolute', inset: zoomLevel === 1 ? 0 : -40,
-               backgroundImage: `url('file:///C:/Users/ASUS/.gemini/antigravity/brain/a27e18be-977f-45f4-9c94-291186d2a4d5/${zoomLevel === 1 ? 'onion_root_tip_1x_overview_1775630175859.png' : 'high_res_mitosis_sample_slide_1775562003218.png'}')`,
-               backgroundSize: zoomLevel === 1 ? 'contain' : 'cover', backgroundPosition: 'center',
-               backgroundRepeat: 'no-repeat',
-               opacity: rootOnSlide ? 1 : 0.1, 
-               filter: `blur(${Math.abs(focus - 0.5) * 15}px) contrast(1.15) saturate(1.4)`,
-               transform: `scale(${zoomLevel === 1 ? 1 : (zoomLevel/3 + 1.2)})`, 
-               transition: 'transform 0.8s ease-out, opacity 0.5s ease-in-out'
+                position: 'absolute', 
+                inset: 0,
+                backgroundImage: `url('${
+                  zoomLevel === 1 ? '/microscope/real_root_1x.png' : 
+                  zoomLevel === 2 ? '/microscope/real_root_2x_realistic.png' :
+                  zoomLevel === 4 ? '/microscope/real_root_4x.png' :
+                  '/microscope/real_root_10x_sharp.png'
+                }')`,
+                backgroundSize: zoomLevel <= 2 ? 'contain' : 'cover', 
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                opacity: zoomLevel <= 4 ? 1.0 : (rootOnSlide ? 1 : 0.08), 
+                mixBlendMode: 'multiply',
+                filter: `
+                  blur(${Math.abs(focus - 0.5) * 8}px) 
+                  contrast(${zoomLevel >= 10 ? 1.3 : 1.5}) 
+                  saturate(1.2) 
+                  brightness(${zoomLevel >= 10 ? 1.0 : 0.98})
+                  sepia(0.04) 
+                `,
+                transform: `scale(${
+                  zoomLevel === 1 ? 1.01 : 
+                  zoomLevel === 2 ? 1.15 : 
+                  (zoomLevel/3 + 1.25)
+                })`, 
+                transition: 'transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease-in-out',
+                zIndex: 1
+             }} />
+
+             {/* 🎯 RADIAL FOCUS BOKEH (Lens Physics - Scaled for clarity) */}
+             <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
+                backdropFilter: zoomLevel >= 10 ? 'blur(1.5px)' : 'blur(3px)',
+                WebkitMaskImage: 'radial-gradient(circle, transparent 40%, black 100%)',
+                maskImage: 'radial-gradient(circle, transparent 40%, black 100%)',
+                opacity: 0.8
+             }} />
+
+             {/* 🌫️ LENS GRAIN & DUST (Static to Eye) */}
+             <div style={{
+               position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
+               background: 'url("https://www.transparenttextures.com/patterns/p6.png")',
+               opacity: 0.12, mixBlendMode: 'overlay'
              }} />
 
              {/* 🧬 INTERACTIVE OVERLAY (10X and 40X) */}
@@ -239,9 +285,27 @@ const MicroscopeUI = () => {
              )}
           </div>
 
-          {/* Vignette & Optical Distortion */}
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle, transparent 40%, #000 120%)', opacity: 0.98 }} />
-          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none', border: '5px solid rgba(173, 20, 87, 0.05)', mixBlendMode: 'screen' }} />
+          {/* 🌑 PHOTOREALISTIC LENS HOUSING */}
+          <div style={{ 
+            position: 'absolute', inset: 0, pointerEvents: 'none', 
+            background: 'radial-gradient(circle, transparent 45%, rgba(0,0,0,0.92) 100%)', 
+            opacity: 1.0, zIndex: 10 
+          }} />
+          
+          {/* ⚖️ OPTICAL CHROMATIC RING (HALO) */}
+          <div style={{ 
+            position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none', 
+            border: '8px solid rgba(0, 229, 255, 0.08)', 
+            boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8), 0 0 20px rgba(0,229,255,0.1)',
+            mixBlendMode: 'screen', zIndex: 11
+          }} />
+
+          {/* ☀️ WARM HALOGEN LIGHT BLOOM - Balanced mix mode */}
+          <div style={{ 
+            position: 'absolute', inset: 0, pointerEvents: 'none', 
+            background: 'radial-gradient(circle, rgba(255,245,215,0.1) 0%, transparent 65%)', 
+            opacity: 1.0, zIndex: 13, mixBlendMode: 'soft-light'
+          }} />
         </div>
 
         {/* 🔘 ZOOM CONTROL */}

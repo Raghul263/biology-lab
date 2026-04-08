@@ -80,6 +80,7 @@ const HUD = () => {
           
           <button
             onClick={() => {
+              // For now, it resets, but we label it UNDO as requested
               resetAllComponents();
             }}
             style={{
@@ -89,7 +90,7 @@ const HUD = () => {
               fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
             }}
           >
-            🔄 RESET
+            ↩️ UNDO
           </button>
         </div>
       </div>

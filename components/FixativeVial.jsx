@@ -119,10 +119,10 @@ const FixativeVial = ({ position: initialPosition = [0.2, 0.93, -0.3] }) => {
           transmission={0.8} thickness={0.5} roughness={0.2} />
       </mesh>
 
-      {/* Alcohol Liquid (Slightly clearer for better visibility) */}
-      <mesh position={[0, 0.06, 0]}>
-        <cylinderGeometry args={[0.016, 0.012, 0.08, 16]} />
-        <meshStandardMaterial color="#b3e5fc" transparent opacity={0.5} roughness={0.1} />
+      {/* Alcohol Liquid (Dark yellow as requested) */}
+      <mesh position={[0, 0.065, 0]}>
+        <cylinderGeometry args={[0.018, 0.012, 0.10, 16]} />
+        <meshStandardMaterial color="#f9a825" transparent opacity={0.75} roughness={0.1} />
       </mesh>
 
       {/* 🧬 Root Tip Inside (Confirmed Visibility) */}
