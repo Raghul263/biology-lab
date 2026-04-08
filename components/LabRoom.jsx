@@ -152,7 +152,7 @@ const LabRoom = () => {
               e.stopPropagation();
               // Check if it's one of our repositionable items
               const repositionables = [
-                'waterBeaker', 'hclBeaker', 'stainBeaker', 'onion', 'tile', 
+                'waterBeaker', 'hclBeaker', 'stainBeaker', 'tile', 
                 'scalpel', 'forceps', 'needle', 'watchGlass', 'vial', 
                 'dropper', 'burner', 'slide', 'coverSlip', 'filterPaper', 'microscope'
               ];
@@ -163,38 +163,18 @@ const LabRoom = () => {
                 const store = useStore.getState();
                 const setupPositions = store.setupPositions;
                 
-                // --- SPECIALIZED SNAPPING FOR ONION ---
+                // --- SPECIALIZED HANDLING FOR ONION (No-Jump Drop) ---
                 if (heldTool === 'onion') {
-                    const tilePos = setupPositions['tile'] || [0, 0.93, 0.3];
-                    const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
-                    const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
-
-                    if (Math.abs(point.x - tilePos[0]) < 0.45 && Math.abs(point.z - tilePos[2]) < 0.45) {
-                        store.setStates({ onionPlacedOn: 'tile' });
-                        store.showWrongAction("Onion fixed to Cutting Tile");
-                        setHeldTool(null);
-                        return;
-                    } else if (Math.abs(point.x - beakerPos[0]) < 0.4 && Math.abs(point.z - beakerPos[2]) < 0.4) {
-                        store.setStates({ onionPlacedOn: 'waterBeaker' });
-                        store.showWrongAction("Onion placed in Water Beaker");
-                        setHeldTool(null);
-                        return;
-                    } else if (Math.abs(point.x - wgPos[0]) < 0.3 && Math.abs(point.z - wgPos[2]) < 0.3) {
-                        store.setStates({ onionPlacedOn: 'watchGlass' });
-                        store.showWrongAction("Onion placed on Watch Glass");
-                        setHeldTool(null);
-                        return;
-                    } else {
-                       store.setStates({ onionPlacedOn: null });
-                    }
+                    setHeldTool(null);
+                    return;
                 }
 
-                // Clamp within safe table bounds
+
+                // Snap/reposition logic for all other items
                 const safeX = Math.max(-2.1, Math.min(2.1, point.x));
                 const safeZ = Math.max(-0.8, Math.min(0.8, point.z));
                 const y = heldTool === 'microscope' ? 1.0 : 0.93;
                 
-                // FIXED: Use the exact click point for better feedback
                 setSetupPosition(heldTool, [safeX, y, safeZ]);
                 setHeldTool(null);
                 return;

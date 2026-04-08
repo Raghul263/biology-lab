@@ -165,7 +165,7 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
       } else {
          // Resting somewhere else unattached (on the table)
          const savedPos = setupPositions['onion'] || position;
-         targetPos.current.set(savedPos[0], savedPos[1] + 0.05, savedPos[2]);
+         targetPos.current.set(savedPos[0], savedPos[1], savedPos[2]);
          targetRot.current.set(0, 0, 0);
       }
     }
@@ -302,26 +302,22 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
     const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
     const wgPos = setupPositions['watchGlass'] || [1.0, 0.93, -0.1];
 
-    // Find the single CLOSEST target to prevent overlapping magnetic zones
     const distToTile = placedComponents.tile ? Math.hypot(pos.x - tilePos[0], pos.z - tilePos[2]) : Infinity;
     const distToBeaker = placedComponents.waterBeaker ? Math.hypot(pos.x - beakerPos[0], pos.z - beakerPos[2]) : Infinity;
     const distToWG = placedComponents.watchGlass ? Math.hypot(pos.x - wgPos[0], pos.z - wgPos[2]) : Infinity;
 
-    const SNAP_DIST = 0.25; // Strict condition: must be above beaker opening
-    let closestTarget = null;
-    let minDist = SNAP_DIST;
-
-    if (distToTile < minDist) { closestTarget = 'tile'; minDist = distToTile; }
-    if (distToBeaker < minDist) { closestTarget = 'waterBeaker'; minDist = distToBeaker; }
-    if (distToWG < minDist) { closestTarget = 'watchGlass'; minDist = distToWG; }
-
-    if (closestTarget === 'tile') {
+    // Strict snap zones for internal onion handler
+    if (distToTile < 0.3) {
       setStates({ onionPlacedOn: 'tile' });
-    } else if (closestTarget === 'waterBeaker') {
+      useStore.getState().showWrongAction("Onion fixed to Cutting Tile");
+    } else if (distToBeaker < 0.25) {
       setStates({ onionPlacedOn: 'waterBeaker' });
-    } else if (closestTarget === 'watchGlass') {
+      useStore.getState().showWrongAction("Onion placed in Water Beaker");
+    } else if (distToWG < 0.25) {
       setStates({ onionPlacedOn: 'watchGlass' });
+      useStore.getState().showWrongAction("Onion placed on Watch Glass");
     } else {
+      // Direct Table Drop
       setStates({ onionPlacedOn: null });
       useStore.getState().setSetupPosition('onion', [pos.x, 0.93, pos.z]);
     }
@@ -385,34 +381,24 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
     <>
       <group ref={meshRef} onPointerDown={handlePointerDown} onContextMenu={handleContextMenu}>
         {/* 🟢 INTERACTION ZONES */}
-        {isHeld && (
-          <mesh 
-            position={[0, 0, 0]}
-            onPointerDown={handlePointerDown}
-            onPointerOver={() => { 
-                document.body.style.cursor = 'cell'; 
-                useStore.getState().setStates({ hoveredComponent: 'onion' });
-            }}
-            onPointerOut={() => {
-                document.body.style.cursor = 'auto';
-                useStore.getState().setStates({ hoveredComponent: null });
-            }}
-          >
-            <planeGeometry args={[1.8, 1.8]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-          </mesh>
-        )}
 
-        {!isHeld && (
+        <group>
+          {/* 🎯 SNAP/HIGHLIGHT GUIDE */}
+          {!heldTool && (
+            <mesh position={[0, -0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <torusGeometry args={[0.06, 0.003, 16, 32]} />
+              <meshBasicMaterial color="#00e5ff" transparent opacity={0.4} />
+            </mesh>
+          )}
           <mesh 
-            position={[0, 0.1, 0]}
+            position={[0, 0.08, 0]}
             onPointerDown={handlePointerDown}
             onContextMenu={handleContextMenu}
           >
-            <boxGeometry args={[0.25, 0.35, 0.25]} />
+            <boxGeometry args={[0.12, 0.18, 0.12]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
           </mesh>
-        )}
+        </group>
         
         <group position={[0, -0.0955, 0]}>
         <OnionShell scale={0.45} />

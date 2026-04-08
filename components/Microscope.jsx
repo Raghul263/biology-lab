@@ -66,7 +66,12 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
 
   const handleZoom = (e) => {
     e.stopPropagation();
+    if (!slideOnMicroscope) {
+        // Option to show feedback: "Place a slide first"
+        return;
+    }
     if (!heldTool || heldTool === 'microscope') {
+      useStore.getState().setStates({ microscopeActive: true });
       toggleMicroscope(true);
     }
   };

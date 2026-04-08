@@ -26,9 +26,12 @@ const LeftPanel = () => {
   const handleInteract = (inst) => {
     if (!placedComponents[inst.id]) {
       setPlaced(inst.id, true);
-      setHeldTool(inst.id); // Add this so it immediately follows the cursor
+      setHeldTool(inst.id); 
     } else {
-      // It's placed, so we can pick it up to reposition it on the table
+      // PERMANENT FIX: Disable picking up the onion from sidebar once it's fixed to the table
+      if (inst.id === 'onion') return;
+      
+      // Other components can still be picked up to reposition
       setHeldTool(heldTool === inst.id ? null : inst.id);
     }
   };
@@ -37,9 +40,9 @@ const LeftPanel = () => {
 
   return (
     <div style={{
-      width: '240px', minWidth: '240px', height: '100%',
-      background: 'rgba(10,15,20,0.85)', backdropFilter: 'blur(16px)',
-      borderRight: '1px solid rgba(255,255,255,0.08)',
+      width: '280px', minWidth: '280px', height: '100%',
+      background: 'rgba(10,15,22,0.92)', backdropFilter: 'blur(20px)',
+      borderRight: '1px solid rgba(255,255,255,0.1)',
       display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
     }}>
       {/* header removed */}
@@ -47,35 +50,34 @@ const LeftPanel = () => {
       <div style={{
         flex: 1, 
         overflowY: 'auto', 
-        padding: '12px',
+        padding: '16px 12px',
         scrollbarWidth: 'thin', 
         scrollbarColor: 'rgba(255,109,0,0.5) transparent',
-        display: !allPlaced ? 'grid' : 'block',
-        gridTemplateColumns: !allPlaced ? '1fr 1fr' : 'none',
-        gap: '8px',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
       }}>
         {instruments.map((inst) => {
           const isPlaced = placedComponents[inst.id];
           const isSelected = heldTool === inst.id;
-          const isArrangeStep = !allPlaced;
 
           return (
             <div
               key={inst.id}
               style={{
-                background: isSelected ? 'rgba(255,152,0,0.2)' : isPlaced ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                border: isSelected ? '1px solid #ff9800' : isPlaced ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '12px', 
-                padding: isArrangeStep ? '10px 6px' : '12px', 
-                marginBottom: isArrangeStep ? '0' : '10px',
-                cursor: 'pointer', transition: 'all 0.2s ease',
-                opacity: (isArrangeStep && isPlaced) ? 0.3 : 1,
+                background: isSelected ? 'rgba(255,152,0,0.2)' : isPlaced ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
+                border: isSelected ? '1px solid #ff9800' : isPlaced ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '14px', 
+                padding: '12px 8px', 
+                cursor: 'pointer', transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                opacity: isPlaced && !isSelected ? 0.45 : 1,
                 display: 'flex',
-                flexDirection: isArrangeStep ? 'column' : 'row',
+                flexDirection: 'column',
                 alignItems: 'center',
                 textAlign: 'center',
-                gap: isArrangeStep ? '6px' : '12px',
+                gap: '8px',
                 position: 'relative',
+                boxShadow: isSelected ? '0 0 15px rgba(255,152,0,0.2)' : 'none',
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -87,36 +89,31 @@ const LeftPanel = () => {
                 e.dataTransfer.effectAllowed = 'copy';
               }}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: isArrangeStep ? '26px' : '28px' }}>{inst.icon}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, width: '100%' }}>
+                <span style={{ fontSize: '32px', marginBottom: '4px', filter: isPlaced ? 'grayscale(0.5)' : 'none' }}>{inst.icon}</span>
                 <span style={{ 
                   color: isSelected ? '#ff9800' : 'rgba(255,255,255,0.95)', 
                   fontSize: '10px', fontWeight: 800, 
-                  marginTop: '6px', letterSpacing: '0.4px',
+                  letterSpacing: '0.6px',
                   textTransform: 'uppercase', textAlign: 'center',
-                  width: '100%', overflow: 'hidden', textOverflow: 'clip', whiteSpace: 'normal',
-                  lineHeight: '1.2'
+                  width: '100%', 
+                  wordWrap: 'break-word',
+                  lineHeight: '1.3'
                 }}>
                   {inst.name}
                 </span>
-                {(!isArrangeStep || isSelected) && (
-                  <span style={{ 
-                    color: 'rgba(255,255,255,0.45)', fontSize: '8.5px', 
-                    marginTop: '3px', textAlign: 'center', fontWeight: 500
-                  }}>
-                    {inst.desc}
-                  </span>
-                )}
               </div>
               
               {isPlaced && (
                 <span style={{ 
-                  position: isArrangeStep ? 'absolute' : 'static',
-                  top: '6px', right: '6px',
-                  fontSize: '11px', color: '#ff9800',
-                  background: 'rgba(255,152,0,0.15)', border: '1px solid rgba(255,152,0,0.3)',
-                  borderRadius: '50%', width: '18px', height: '18px', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  position: 'absolute',
+                  top: '8px', right: '8px',
+                  fontSize: '10px', color: '#ff9800',
+                  background: 'rgba(255,152,0,0.2)', 
+                  border: '1px solid rgba(255,152,0,0.4)',
+                  borderRadius: '50%', width: '16px', height: '16px', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 'bold'
                 }}>✓</span>
               )}
             </div>

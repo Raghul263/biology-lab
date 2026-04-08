@@ -4,11 +4,11 @@ import { Html } from '@react-three/drei';
 import useStore from '../lib/store';
 import * as THREE from 'three';
 
-const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
+const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false }) => {
   const {
     rootOnSlide, slideHclApplied, slideStainApplied, slideWaterApplied, slideOnBurner, burnerOn, 
     slideHeated, slideHeatingProgress, paperOnSlide, cleaningProgress, stainRemoved,
-    coverSlipPlaced, squashed, 
+    coverSlipPlaced, squashed, isSquashing, squashProgress,
     slideOnMicroscope, setStates, heldTool, setHeldTool
   } = useStore();
 
@@ -20,6 +20,11 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
 
   useFrame((state, delta) => {
+    if (isAttached) {
+        if (groupRef.current) groupRef.current.position.set(0, 0.012, 0);
+        return;
+    }
+
     if (unlockTime > 0) setUnlockTime(prev => Math.max(0, prev - delta));
 
     const pos = groupRef.current?.position;
@@ -79,11 +84,19 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
         if (e && e.stopPropagation) e.stopPropagation();
     }
     
-    // 🔬 DETACH LOGIC
-    if (slideOnMicroscope || slideOnBurner) {
-        setStates({ slideOnMicroscope: false, slideOnBurner: false });
+    // 🧬 RELEASE LOGIC (From Microscope Stage)
+    if (slideOnMicroscope) {
+        setStates({ slideOnMicroscope: false, microscopeActive: false });
         setHeldTool('slide');
         setUnlockTime(2.0); 
+        return; 
+    }
+
+    // 🧬 Detach from Burner
+    if (slideOnBurner) {
+        setStates({ slideOnBurner: false });
+        setHeldTool('slide');
+        setUnlockTime(2.0);
         return; 
     }
 
@@ -92,9 +105,10 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
       const burnerPos = useStore.getState().setupPositions['burner'] || [0.7, 0.93, 0];
       const microPos = useStore.getState().setupPositions['microscope'] || [0, 1.0, -0.7];
       
+      // 🔬 PLACE ON MICROSCOPE
       if (Math.abs(pos.x - microPos[0]) < 0.25 && Math.abs(pos.z - microPos[2]) < 0.3) {
         setStates({ slideOnMicroscope: true });
-        useStore.getState().setSetupPosition('slide', [microPos[0], 1.0 + 0.1, microPos[2] + 0.08]);
+        useStore.getState().setSetupPosition('slide', [microPos[0], 1.0 + 0.1, microPos[1] + 0.08]);
       } else if (Math.abs(pos.x - burnerPos[0]) < 0.2 && Math.abs(pos.z - burnerPos[2]) < 0.2) {
         const isActuallyOnTop = Math.abs(pos.x - burnerPos[0]) < 0.12 && Math.abs(pos.z - burnerPos[2]) < 0.12;
         if (isActuallyOnTop) {
@@ -123,7 +137,7 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
     } else if (heldTool === 'needle' && coverSlipPlaced && !squashed) {
       setStates({ squashed: true });
       setHeldTool(null);
-    } else if (!heldTool && !squashed) {
+    } else if (!heldTool) {
       setHeldTool('slide');
       setUnlockTime(2.0); 
     }
@@ -141,7 +155,7 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
       onPointerDown={handleInteraction}
       onPointerOver={() => {
         if (isHeld) document.body.style.cursor = 'grabbing';
-        else if (squashed) document.body.style.cursor = 'grab';
+        else if (squashed) document.body.style.cursor = 'move';
         else document.body.style.cursor = 'pointer';
         setStates({ hoveredComponent: 'slide' });
       }}
@@ -167,30 +181,35 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
           />
         </mesh>
 
-        {/* 💧 Heat UI Label: Only during active drag heating */}
-        {isActiveHeating && (
-           <Html position={[0, 0.15, 0]} center pointerEvents="none">
-             <div className="px-3 py-1 bg-black/60 backdrop-blur-sm text-white text-[12px] font-bold rounded-full border border-orange-400 select-none">
-               5 – 10 seconds
+        {/* 🕒 Heat Timer Label: 5 - 10 seconds style */}
+        {isActiveHeating && !slideHeated && (
+           <Html position={[0, 0.25, 0]} center pointerEvents="none">
+             <div style={{
+               color: '#ffffff', fontSize: '24px', fontWeight: '900',
+               textAlign: 'center', whiteSpace: 'nowrap', userSelect: 'none',
+               textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: '"Inter", sans-serif'
+             }}>
+               5 - 10<br/>seconds
              </div>
            </Html>
         )}
 
-        {/* ✅ HEATED Status Badge (Only on Burner) */}
+        {/* ✅ HEATED Status Badge (Exact Image Match) */}
         {slideHeated && slideOnBurner && (
-           <Html position={[0, 0.22, 0]} center pointerEvents="none" distanceFactor={2.5}>
+           <Html position={[0, 0.3, 0]} center pointerEvents="none" distanceFactor={2.5}>
              <div style={{
-               display: 'flex', alignItems: 'center', gap: '8px',
-               padding: '6px 12px', background: '#2e7d32', color: '#ffffff',
-               fontSize: '14px', fontWeight: 800, borderRadius: '4px',
-               boxShadow: '0 4px 12px rgba(0,0,0,0.4)', borderBottom: '3px solid #1b5e20',
-               whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none'
+               display: 'flex', alignItems: 'center', gap: '12px',
+               padding: '10px 24px', background: '#2e7d32', color: '#ffffff',
+               fontSize: '22px', fontWeight: 800, borderRadius: '8px',
+               boxShadow: '0 6px 15px rgba(0,0,0,0.5)', borderBottom: '4px solid #1b5e20',
+               whiteSpace: 'nowrap', pointerEvents: 'none', userSelect: 'none',
+               fontFamily: '"Inter", sans-serif'
              }}>
                <div style={{
-                 width: '18px', height: '18px', background: 'rgba(255,255,255,0.2)',
-                 borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                 width: '28px', height: '28px', background: 'rgba(255,255,255,0.2)',
+                 borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center'
                }}>
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ width: '12px', height: '12px' }}>
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ width: '18px', height: '18px' }}>
                    <polyline points="20 6 9 17 4 12" />
                  </svg>
                </div>
@@ -233,26 +252,33 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
         {rootOnSlide && (
           <group position={[0, 0.006, 0]}>
             <mesh 
-              scale={squashed ? [2.5, 0.05, 2.5] : [1, 1, 1]}
-              position={[0, squashed ? -0.002 : 0, 0]}
+              scale={squashed ? [3.0, 0.04, 3.0] : (isSquashing ? [1 + squashProgress * 2.0, 1 - squashProgress * 0.96, 1 + squashProgress * 2.0] : [1, 1, 1])}
+              position={[0, (squashed || isSquashing) ? -0.001 : 0, 0]}
             >
               <cylinderGeometry args={[0.005, 0.006, 0.02, 16]} />
               <meshStandardMaterial 
-                color={slideStainApplied ? "#ad1457" : "#f0e6c8"} 
-                transparent={squashed}
-                opacity={squashed ? 0.6 : 1.0}
-                emissive={slideOnBurner && burnerOn ? "#ff3d00" : "#000000"}
-                emissiveIntensity={slideOnBurner && burnerOn ? 1.0 : 0}
+                color={slideStainApplied ? "#ff1744" : "#f0e6c8"} 
+                transparent={squashed || isSquashing}
+                opacity={(squashed || isSquashing) ? 0.7 : 1.0}
+                emissive={slideOnBurner && burnerOn ? "#ff3d00" : (slideStainApplied ? "#c62828" : "#000000")}
+                emissiveIntensity={slideOnBurner && burnerOn ? 1.0 : (slideStainApplied ? 0.2 : 0)}
               />
             </mesh>
           </group>
         )}
         
-        {/* 🔲 COVER SLIP */}
+        {/* 🔲 COVER SLIP (ATTACHED) */}
         {coverSlipPlaced && (
           <mesh position={[0, squashed ? 0.005 : 0.008, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.12, 0.001, 0.12]} />
             <meshPhysicalMaterial color="#ffffff" transparent transmission={1.0} thickness={0.01} roughness={0.01} ior={1.5} />
+          </mesh>
+        )}
+
+        {/* 🔘 UNIFIED HIT AREA (Covers Slide + Cover Slip) */}
+        {!isAttached && (
+          <mesh position={[0, 0.01, 0]} visible={false}>
+            <boxGeometry args={[0.42, 0.03, 0.16]} />
           </mesh>
         )}
 
@@ -275,13 +301,6 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2] }) => {
            </mesh>
         )}
  
-        {/* 🎯 SNAP GUIDE: Only when holding filter paper or cover slip */}
-        {((heldTool === 'filterPaper' && !paperOnSlide) || (heldTool === 'coverSlip' && !coverSlipPlaced)) && (
-           <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-             <torusGeometry args={[0.08, 0.005, 16, 32]} />
-             <meshBasicMaterial color="#00e5ff" transparent opacity={0.6} />
-           </mesh>
-        )}
       </group>
     </group>
   );

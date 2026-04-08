@@ -106,6 +106,7 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
 
       if (!cutTriggered) {
           const pos = meshRef.current.position;
+          // Drop where it is (LERP will have brought it to mouse)
           useStore.getState().setSetupPosition('scalpel', [pos.x, 0.93, pos.z]);
           setHeldTool(null);
       }
@@ -160,7 +161,7 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
           onPointerDown={handleClick}
           onPointerOver={() => { document.body.style.cursor = 'cell'; }}
         >
-          <planeGeometry args={[2.0, 2.0]} />
+          <planeGeometry args={[6.0, 6.0]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
