@@ -218,18 +218,8 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
            setGrowthTimer(t => t + delta);
        }
 
-       // Auto zoom to beaker during growth
-       if (growthTimer > 0 && growthTimer <= 6.5) {
-           // Higher zoom angle so the user still sees the table straight normally
-           const zoomPos = new THREE.Vector3(targetPos.current.x, targetPos.current.y + 1.2, targetPos.current.z + 2.0);
-           state.camera.position.lerp(zoomPos, 0.05);
-           // Temporarily disable OrbitControls' fighting by overriding its target implicitly
-       } else if (growthTimer > 6.5 && growthTimer < 7.5) {
-           // Smoothly return toward default position [0, 3.0, 4.5] for 1 second after
-           state.camera.position.lerp(new THREE.Vector3(0, 3.0, 4.5), 0.03);
-           setGrowthTimer(t => t + delta);
-       }
-    } else {
+       // Auto zoom removed as per user request
+     } else {
        if (onionRootsState !== 'GROWN') {
           if (growthTimer !== 0) setGrowthTimer(0);
        }
@@ -335,12 +325,26 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
 
     // IF NOT HELD: 
     if (!heldTool) {
-      // Pick up the onion freely (No permanent lock anymore)
+      // 🛡️ ACCIDENTAL PICKUP PROTECTION:
+      // Only pick up if clicking the bulb specifically, and not just the outer interaction zone
+      const localPoint = meshRef.current.worldToLocal(e.point.clone());
+      const distFromCenter = localPoint.length();
+      
+      // If clicking far from the center (accidental click near the component), ignore it
+      // Threshold (0.22) ensures you must click the onion itself, but is forgiving enough for easy pickup
+      if (distFromCenter > 0.22) return; 
+      
+      // If was fixed, pop it out
+      if (onionPlacedOn) {
+        setStates({ 
+            onionPlacedOn: null, 
+            onionInBeaker: false, 
+            onionBottomInWater: false 
+        });
+      }
+      
       setHeldTool('onion');
     } else {
-      // 🧠 SMART ZONE INTERACTION (ONLY enabled if NOT holding a primary tool action)
-      const localPoint = meshRef.current.worldToLocal(e.point.clone());
-      const isClickingBulb = localPoint.y < 0.05; 
       
       // OTHERWISE: Tool Action on roots
       if (heldTool === 'scalpel') {
@@ -391,11 +395,15 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
             </mesh>
           )}
           <mesh 
-            position={[0, 0.08, 0]}
+            position={[0, onionPlacedOn ? 0.15 : 0.08, 0]}
             onPointerDown={handlePointerDown}
             onContextMenu={handleContextMenu}
           >
-            <boxGeometry args={[0.12, 0.18, 0.12]} />
+            <boxGeometry args={[
+                onionPlacedOn ? 0.08 : 0.12, 
+                onionPlacedOn ? 0.1 : 0.18, 
+                onionPlacedOn ? 0.08 : 0.12
+            ]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
           </mesh>
         </group>

@@ -181,19 +181,6 @@ const Slide = ({ position: initialPosition = [0, 0.93, 0.2], isAttached = false 
           />
         </mesh>
 
-        {/* 🕒 Heat Timer Label: 5 - 10 seconds style */}
-        {isActiveHeating && !slideHeated && (
-           <Html position={[0, 0.25, 0]} center pointerEvents="none">
-             <div style={{
-               color: '#ffffff', fontSize: '24px', fontWeight: '900',
-               textAlign: 'center', whiteSpace: 'nowrap', userSelect: 'none',
-               textShadow: '0 2px 10px rgba(0,0,0,0.5)', fontFamily: '"Inter", sans-serif'
-             }}>
-               5 - 10<br/>seconds
-             </div>
-           </Html>
-        )}
-
         {/* ✅ HEATED Status Badge (Exact Image Match) */}
         {slideHeated && slideOnBurner && (
            <Html position={[0, 0.3, 0]} center pointerEvents="none" distanceFactor={2.5}>

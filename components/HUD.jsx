@@ -2,16 +2,17 @@ import React from 'react';
 import useStore from '../lib/store';
 
 const HUD = () => {
-  const { heldTool, setHeldTool, cameraLocked, setStates, resetAllComponents } = useStore();
+  const { heldTool, setHeldTool, cameraLocked, setStates, undoPlacement } = useStore();
 
   return (
     <>
       <div style={{
         position: 'absolute',
-        top: '16px',
-        right: '16px',
-        width: '280px',
-        padding: '16px 18px',
+        top: '12px',
+        right: '24px',
+        width: '260px',
+        maxWidth: 'calc(100vw - 32px)',
+        padding: '12px',
         background: 'rgba(8, 14, 22, 0.88)',
         backdropFilter: 'blur(16px)',
         borderRadius: '16px',
@@ -64,30 +65,31 @@ const HUD = () => {
           </button>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', width: '100%', boxSizing: 'border-box' }}>
           <button
             onClick={() => setStates({ cameraLocked: !cameraLocked })}
             style={{
-              flex: 1, padding: '8px',
+              flex: 1, padding: '8px 4px',
               background: cameraLocked ? 'rgba(255,152,0,0.15)' : 'rgba(255,255,255,0.05)',
               border: cameraLocked ? '1px solid #ff9800' : '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '10px', color: cameraLocked ? '#ff9800' : 'rgba(255,255,255,0.6)',
-              fontSize: '10px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
+              borderRadius: '8px', color: cameraLocked ? '#ff9800' : 'rgba(255,255,255,0.8)',
+              fontSize: '10px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap', minWidth: '0'
             }}
           >
-            {cameraLocked ? '🔒 LOCKED' : '🔓 UNLOCKED'}
+            {cameraLocked ? '🔒 LOCKED' : '🔓 UNLOCK'}
           </button>
           
           <button
             onClick={() => {
-              // For now, it resets, but we label it UNDO as requested
-              resetAllComponents();
+              undoPlacement();
             }}
             style={{
-              flex: 1, padding: '8px',
+              flex: 1, padding: '8px 4px',
               background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '10px', color: 'rgba(255,255,255,0.6)', fontSize: '10px',
-              fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
+              borderRadius: '8px', color: 'rgba(255,255,255,0.9)', fontSize: '10px',
+              fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease',
+              whiteSpace: 'nowrap', minWidth: '0'
             }}
           >
             ↩️ UNDO

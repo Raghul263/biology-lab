@@ -165,6 +165,12 @@ const LabRoom = () => {
                 
                 // --- SPECIALIZED HANDLING FOR ONION (No-Jump Drop) ---
                 if (heldTool === 'onion') {
+                    const point = e.point;
+                    const safeX = Math.max(-2.1, Math.min(2.1, point.x));
+                    const safeZ = Math.max(-0.8, Math.min(0.8, point.z));
+                    
+                    // Save the new table position so it doesn't jump back
+                    setSetupPosition('onion', [safeX, 0.93, safeZ]);
                     setHeldTool(null);
                     return;
                 }
