@@ -33,8 +33,8 @@ const LabRoom = () => {
   });
   
   const wallColor = "#fff3e0";
-  const floorColor = "#eceff1";
-  const woodColor = "#5d4037";
+  const floorColor = "#9e9e9e";
+  const woodColor = "#a04000";
   const blueChairColor = "#1565c0";
 
   const shelfJarsData = useMemo(() => {
@@ -197,6 +197,11 @@ const LabRoom = () => {
         </group>
       </group>
 
+      {/* 🟠 FIXED GAS OUTLET (for burner wire) */}
+      <mesh position={[1.6, 0.931, 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.04, 32]} />
+        <meshBasicMaterial color="#111111" />
+      </mesh>
       {/* 7. Furniture: Desk & Chair */}
       <group position={[-5, 0, -5]}>
         <mesh position={[0, 0.4, 0]} castShadow receiveShadow><boxGeometry args={[1.8, 0.8, 1.0]} /><meshStandardMaterial color={woodColor} /></mesh>
