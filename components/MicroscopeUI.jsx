@@ -1,11 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import useStore from '../lib/store';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Environment } from '@react-three/drei';
+import * as THREE from 'three';
 
-// ─── Mitosis Phase Data ──────────────────────────────────────────────────────
+// â”€â”€â”€ Mitosis Phase Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PHASES = {
   Interphase: {
     name: 'Interphase', color: '#7c3aed',
-    label: 'Interphase – chromosomes are thin and nucleus is clear',
+    label: 'Interphase â€“ chromosomes are thin and nucleus is clear',
     description: 'Cell in normal metabolic state. DNA is uncoiled as chromatin. Nucleus is clearly visible with a prominent nucleolus.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -17,7 +20,7 @@ const PHASES = {
   },
   Prophase: {
     name: 'Prophase', color: '#c2185b',
-    label: 'Prophase – chromatin condenses into visible chromosomes',
+    label: 'Prophase â€“ chromatin condenses into visible chromosomes',
     description: 'Chromatin condenses into discrete chromosomes. Nuclear envelope begins breaking down.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -30,7 +33,7 @@ const PHASES = {
   },
   Metaphase: {
     name: 'Metaphase', color: '#d32f2f',
-    label: 'Metaphase – chromosomes aligned at center plate',
+    label: 'Metaphase â€“ chromosomes aligned at center plate',
     description: 'Chromosomes align along the equatorial plate. Spindle fibers attach to centromeres.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -43,7 +46,7 @@ const PHASES = {
   },
   Anaphase: {
     name: 'Anaphase', color: '#e64a19',
-    label: 'Anaphase – sister chromatids pulling to opposite poles',
+    label: 'Anaphase â€“ sister chromatids pulling to opposite poles',
     description: 'Centromeres split and sister chromatids are pulled toward opposite poles.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${75 * scale}px` }}>
@@ -59,7 +62,7 @@ const PHASES = {
   },
   Telophase: {
     name: 'Telophase', color: '#388e3c',
-    label: 'Telophase – two new daughter nuclei forming',
+    label: 'Telophase â€“ two new daughter nuclei forming',
     description: 'Nuclear envelopes reform. Chromosomes decondense. Cytokinesis begins.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${80 * scale}px` }}>
@@ -72,22 +75,227 @@ const PHASES = {
   },
 };
 
-// ─── Zoom level config ────────────────────────────────────────────────────────
+// â”€â”€â”€ Zoom level config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ZOOM_CONFIG = {
-  4:   { label: '4X',   multiplier: '4×',   desc: 'Overview – Root tissue architecture', cellCount: 0, scale: 0.45, imgKey: '4x'  },
-  10:  { label: '10X',  multiplier: '10×',  desc: 'Low Power – Tissue differentiation', cellCount: 18, scale: 0.72, imgKey: '10x' },
-  40:  { label: '40X',  multiplier: '40×',  desc: 'High Power – Cellular detail',       cellCount: 8, scale: 1.2, imgKey: '40x' },
-  100: { label: '100X', multiplier: '100×', desc: 'Oil Immersion – Chromosome analysis',cellCount: 4, scale: 2.0, imgKey: '100x'},
+  4:   { label: '4X',   multiplier: '4Ã—',   desc: 'Overview â€“ Root tissue architecture', cellCount: 0, scale: 0.45, imgKey: '4x'  },
+  10:  { label: '10X',  multiplier: '10Ã—',  desc: 'Low Power â€“ Tissue differentiation', cellCount: 18, scale: 0.72, imgKey: '10x' },
+  40:  { label: '40X',  multiplier: '40Ã—',  desc: 'High Power â€“ Cellular detail',       cellCount: 8, scale: 1.2, imgKey: '40x' },
+  100: { label: '100X', multiplier: '100Ã—', desc: 'Oil Immersion â€“ Chromosome analysis',cellCount: 4, scale: 2.0, imgKey: '100x'},
 };
 const ZOOM_ORDER = [4, 10, 40, 100];
 
-// ─── Rotary Lens Selector ─────────────────────────────────────────────────────
+// â”€â”€â”€ Inline 3D Microscope Scene for left panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+const LENS_COLORS = { 4: '#ef5350', 10: '#ffa726', 40: '#42a5f5', 100: '#ab47bc' };
+const NOSEPIECE_ANGLES = { 4: 0, 10: Math.PI * 0.5, 40: Math.PI, 100: Math.PI * 1.5 };
+
+function MicroscopeModel({ zoomLevel, focusValue = 0.5 }) {
+  const nosepieceRef = useRef();
+  const targetAngle = useRef(0);
+  const mat = { roughness: 0.3, metalness: 0.8 };
+  const silver = { color: '#c0c0c0', ...mat };
+  const black = { color: '#111', roughness: 0.5, metalness: 0.3 };
+  const darkGray = { color: '#555', ...mat };
+
+  useEffect(() => { targetAngle.current = NOSEPIECE_ANGLES[zoomLevel] ?? 0; }, [zoomLevel]);
+  useFrame((_, delta) => {
+    if (!nosepieceRef.current) return;
+    const cur = nosepieceRef.current.rotation.y;
+    let diff = targetAngle.current - cur;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    nosepieceRef.current.rotation.y += diff * Math.min(1, 6 * delta);
+  });
+
+  const lensObjs = [
+    { zoom: 4, angle: 0, len: 0.04 }, { zoom: 10, angle: Math.PI*0.5, len: 0.07 },
+    { zoom: 40, angle: Math.PI, len: 0.10 }, { zoom: 100, angle: Math.PI*1.5, len: 0.13 },
+  ];
+
+  return (
+    <group rotation={[0.1, 0.5, 0]} position={[0, -0.1, 0]}>
+      {/* BASE */}
+      <mesh position={[0, -0.55, 0]}>
+        <boxGeometry args={[0.8, 0.08, 0.55]} />
+        <meshStandardMaterial color="#3a3a4a" roughness={0.6} metalness={0.4} />
+      </mesh>
+      {/* BASE TOP GREEN SURFACE */}
+      <mesh position={[0, -0.508, 0]}>
+        <boxGeometry args={[0.72, 0.004, 0.48]} />
+        <meshStandardMaterial color="#4caf50" roughness={0.9} />
+      </mesh>
+      {/* LED ILLUMINATOR */}
+      <mesh position={[0, -0.51, 0.1]}>
+        <cylinderGeometry args={[0.04, 0.045, 0.025, 32]} />
+        <meshStandardMaterial {...silver} />
+      </mesh>
+      <mesh position={[0, -0.496, 0.1]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.003, 32]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffaa" emissiveIntensity={5} />
+      </mesh>
+      <pointLight color="#fff8e1" intensity={0.6} distance={0.5} position={[0, -0.47, 0.1]} />
+
+      {/* COLUMN (arm, right side) */}
+      <mesh position={[0.22, 0.0, -0.14]}>
+        <boxGeometry args={[0.1, 1.1, 0.1]} />
+        <meshStandardMaterial {...silver} />
+      </mesh>
+      {/* TOP HORIZONTAL BAR */}
+      <mesh position={[0.02, 0.52, -0.14]}>
+        <boxGeometry args={[0.42, 0.08, 0.1]} />
+        <meshStandardMaterial {...silver} />
+      </mesh>
+
+      {/* COARSE FOCUS KNOB (left) */}
+      <mesh position={[0.175, 0.0, -0.14]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.07, 0.07, 0.025, 32]} />
+        <meshStandardMaterial {...silver} roughness={0.2} />
+      </mesh>
+      {/* COARSE FOCUS KNOB (right) */}
+      <mesh position={[0.265, 0.0, -0.14]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.07, 0.07, 0.025, 32]} />
+        <meshStandardMaterial {...silver} roughness={0.2} />
+      </mesh>
+      {/* FINE FOCUS KNOB (left) */}
+      <mesh position={[0.175, -0.09, -0.14]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.045, 0.045, 0.022, 32]} />
+        <meshStandardMaterial {...darkGray} />
+      </mesh>
+      {/* FINE FOCUS KNOB (right) */}
+      <mesh position={[0.265, -0.09, -0.14]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.045, 0.045, 0.022, 32]} />
+        <meshStandardMaterial {...darkGray} />
+      </mesh>
+
+      {/* ---------- MOVING STAGE GROUP ---------- */}
+      <group position={[0, (focusValue - 0.5) * 0.05, 0]}>
+        {/* STAGE */}
+        <mesh position={[0, -0.26, 0.05]}>
+          <boxGeometry args={[0.62, 0.018, 0.5]} />
+          <meshStandardMaterial color="#222" roughness={0.5} metalness={0.5} />
+        </mesh>
+        {/* STAGE CLIPS */}
+        {[-0.12, 0.12].map((x, i) => (
+          <mesh key={i} position={[x, -0.248, 0.08]}>
+            <boxGeometry args={[0.08, 0.012, 0.16]} />
+            <meshStandardMaterial {...silver} />
+          </mesh>
+        ))}
+        {/* GLASS SLIDE on stage */}
+        <mesh position={[0, -0.248, 0.08]}>
+          <boxGeometry args={[0.16, 0.002, 0.06]} />
+          <meshStandardMaterial color="#b3e5fc" transparent opacity={0.5} roughness={0} />
+        </mesh>
+
+        {/* CONDENSER */}
+        <mesh position={[0, -0.34, 0.1]}>
+          <cylinderGeometry args={[0.04, 0.05, 0.1, 32]} />
+          <meshStandardMaterial {...darkGray} />
+        </mesh>
+      </group>
+
+      {/* BODY TUBE */}
+      <mesh position={[-0.08, 0.25, -0.05]}>
+        <cylinderGeometry args={[0.04, 0.045, 0.44, 32]} />
+        <meshStandardMaterial {...black} />
+      </mesh>
+
+      {/* HEAD (binocular mount base) */}
+      <mesh position={[-0.08, 0.49, -0.05]}>
+        <boxGeometry args={[0.16, 0.05, 0.10]} />
+        <meshStandardMaterial {...black} />
+      </mesh>
+      {/* Angled prism box */}
+      <mesh position={[-0.08, 0.52, -0.02]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[0.14, 0.06, 0.08]} />
+        <meshStandardMaterial {...black} />
+      </mesh>
+
+      {/* EYEPIECE TUBES (angled) - Left & Right */}
+      {[-0.045, 0.045].map((xOffset, i) => (
+        <group key={i} position={[-0.08 + xOffset, 0.54, 0]} rotation={[0.4, 0, 0]}>
+          {/* Main tube */}
+          <mesh position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[0.022, 0.026, 0.12, 32]} />
+            <meshStandardMaterial {...black} />
+          </mesh>
+          {/* Focus adjustment ring on the tube */}
+          <mesh position={[0, 0.02, 0]}>
+            <cylinderGeometry args={[0.028, 0.028, 0.02, 32]} />
+            <meshStandardMaterial {...silver} roughness={0.3} />
+          </mesh>
+          {/* Eyepiece eye cup */}
+          <mesh position={[0, 0.12, 0]}>
+            <cylinderGeometry args={[0.033, 0.022, 0.016, 32]} />
+            <meshStandardMaterial color="#0a0a0a" roughness={0.9} />
+          </mesh>
+          {/* Eyepiece crystal */}
+          <mesh position={[0, 0.128, 0]}>
+            <cylinderGeometry args={[0.022, 0.022, 0.003, 32]} />
+            <meshStandardMaterial color="#b3e5fc" transparent opacity={0.7} roughness={0} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* ROTATING NOSEPIECE GROUP */}
+      <group ref={nosepieceRef} position={[-0.08, 0.03, -0.05]}>
+        {/* Nosepiece disc */}
+        <mesh>
+          <cylinderGeometry args={[0.075, 0.085, 0.04, 32]} />
+          <meshStandardMaterial {...silver} />
+        </mesh>
+        {/* 4 Objective lenses */}
+        {lensObjs.map((obj) => {
+          const isActive = zoomLevel === obj.zoom;
+          const color = LENS_COLORS[obj.zoom];
+          const cx = Math.sin(obj.angle) * 0.055;
+          const cz = Math.cos(obj.angle) * 0.055;
+          return (
+            <group key={obj.zoom} position={[cx, 0, cz]}>
+              <mesh position={[0, -(obj.len/2 + 0.02), 0]}>
+                <cylinderGeometry args={[0.016, 0.013, obj.len, 16]} />
+                <meshStandardMaterial color={isActive ? color : '#999'} roughness={0.3} metalness={0.8}
+                  emissive={isActive ? color : '#000'} emissiveIntensity={isActive ? 0.5 : 0} />
+              </mesh>
+              {/* Color ring */}
+              <mesh position={[0, -0.025, 0]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.008, 16]} />
+                <meshStandardMaterial color={color} emissive={color} emissiveIntensity={isActive ? 2 : 0.2} />
+              </mesh>
+            </group>
+          );
+        })}
+        {/* Hub */}
+        <mesh>
+          <cylinderGeometry args={[0.012, 0.012, 0.05, 16]} />
+          <meshStandardMaterial {...darkGray} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function MicroscopeViewer({ zoomLevel, focusValue }) {
+  return (
+    <div style={{ width: '100%', height: '280px', borderRadius: '12px', overflow: 'hidden',
+      border: '1px solid rgba(255,255,255,0.08)', background: 'radial-gradient(circle at 40% 40%, #1a1a2e, #080810)' }}>
+      <Canvas camera={{ position: [0.0, 0.0, 2.8], fov: 45 }} shadows>
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[2, 3, 2]} intensity={1.2} castShadow />
+        <directionalLight position={[-1, 1, -1]} intensity={0.3} color="#4488ff" />
+        <pointLight position={[0, 1.5, 0]} intensity={0.5} color="#ffffff" />
+        <MicroscopeModel zoomLevel={zoomLevel} focusValue={focusValue} />
+        <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
+      </Canvas>
+    </div>
+  );
+}
+
 const LensRevolver = ({ currentZoom, onSwitch, isRotating }) => {
   const lenses = [
-    { zoom: 4,   color: '#ef5350', label: '4×'   },
-    { zoom: 10,  color: '#ffa726', label: '10×'  },
-    { zoom: 40,  color: '#42a5f5', label: '40×'  },
-    { zoom: 100, color: '#ab47bc', label: '100×' },
+    { zoom: 4,   color: '#ef5350', label: '4Ã—'   },
+    { zoom: 10,  color: '#ffa726', label: '10Ã—'  },
+    { zoom: 40,  color: '#42a5f5', label: '40Ã—'  },
+    { zoom: 100, color: '#ab47bc', label: '100Ã—' },
   ];
   const currentIdx = ZOOM_ORDER.indexOf(currentZoom);
   const angle = currentIdx * -90;
@@ -136,7 +344,7 @@ const LensRevolver = ({ currentZoom, onSwitch, isRotating }) => {
   );
 };
 
-// ─── Rotary Knob ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Rotary Knob â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RotaryKnob = ({ label, value, onChange, min = 0, max = 1, color = '#00e5ff', size = 64 }) => {
   const angle = ((value - min) / (max - min)) * 270 - 135;
   const [dragging, setDragging] = useState(false);
@@ -186,7 +394,7 @@ const RotaryKnob = ({ label, value, onChange, min = 0, max = 1, color = '#00e5ff
   );
 };
 
-// ─── Vertical Rack (Fine / Coarse Focus) ─────────────────────────────────────
+// â”€â”€â”€ Vertical Rack (Fine / Coarse Focus) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const FocusRack = ({ label, value, onChange, min = 0, max = 1, color = '#00e5ff' }) => {
   const pct = ((value - min) / (max - min)) * 100;
   const [dragging, setDragging] = useState(false);
@@ -241,7 +449,7 @@ const FocusRack = ({ label, value, onChange, min = 0, max = 1, color = '#00e5ff'
   );
 };
 
-// ─── Light Diaphragm ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Light Diaphragm â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LightDial = ({ value, onChange }) => (
   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', userSelect: 'none' }}>
     <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.5)', letterSpacing: '2px', fontWeight: 700 }}>LIGHT</div>
@@ -254,7 +462,7 @@ const LightDial = ({ value, onChange }) => (
   </div>
 );
 
-// ─── Lens Axis Elevator (the barrel moves up/down on zoom change) ─────────────
+// â”€â”€â”€ Lens Axis Elevator (the barrel moves up/down on zoom change) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LensTube = ({ zoom, prevZoom }) => {
   const heights = { 4: 0, 10: 14, 40: 28, 100: 42 };
   const h = heights[zoom] ?? 0;
@@ -274,7 +482,7 @@ const LensTube = ({ zoom, prevZoom }) => {
   );
 };
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// â”€â”€â”€ MAIN COMPONENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MicroscopeUI = () => {
   const { toggleMicroscope, rootOnSlide, slideOnMicroscope, zoomLevel, microscopeActive, setStates, squashed, slideStainApplied } = useStore();
 
@@ -323,7 +531,7 @@ const MicroscopeUI = () => {
 
   if (!microscopeActive) return null;
 
-  // ── Layout: split-screen (left = microscope controls, right = lens view) ──
+  // â”€â”€ Layout: split-screen (left = microscope controls, right = lens view) â”€â”€
   return (
     <div style={{
       position: 'absolute', inset: 0,
@@ -342,7 +550,7 @@ const MicroscopeUI = () => {
         input[type=range]::-webkit-slider-runnable-track { background: rgba(255,255,255,0.12); border-radius: 3px; }
       `}</style>
 
-      {/* ══════════ LEFT PANEL — Microscope Body & Controls ══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â• LEFT PANEL â€” Microscope Body & Controls â•â•â•â•â•â•â•â•â•â• */}
       <div style={{
         width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '24px 16px', borderRight: '1px solid rgba(255,255,255,0.06)',
@@ -361,25 +569,18 @@ const MicroscopeUI = () => {
           onMouseOver={e => e.currentTarget.style.borderColor = '#00e5ff'}
           onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
         >
-          ← BACK TO LAB
+          â† BACK TO LAB
         </button>
 
-        {/* ── Microscope SVG / schematic body ── */}
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0px', marginBottom: '20px' }}>
-          {/* Arm */}
-          <div style={{ width: '10px', height: '90px', background: 'linear-gradient(to right, #888, #ccc, #888)', borderRadius: '5px', boxShadow: '2px 0 8px rgba(0,0,0,0.5)' }} />
-          
-          {/* Lens tube with elevator */}
-          <LensTube zoom={zoomLevel} prevZoom={prevZoom} />
-
-          {/* Stage platform */}
-          <div style={{ width: '120px', height: '10px', background: 'linear-gradient(to bottom, #bbb, #777)', borderRadius: '3px', margin: '4px 0', boxShadow: '0 4px 12px rgba(0,0,0,0.6)' }} />
-          
-          {/* Base */}
-          <div style={{ width: '90px', height: '20px', background: 'linear-gradient(to bottom, #777, #444)', borderRadius: '4px', boxShadow: '0 6px 20px rgba(0,0,0,0.7)' }} />
+        {/* â”€â”€ 3D Microscope Simulation View â”€â”€ */}
+        <div style={{ width: '90%', marginBottom: '16px' }}>
+          <MicroscopeViewer zoomLevel={zoomLevel} focusValue={effectiveFocus} />
         </div>
 
-        {/* ── CONTROLS PANEL ── */}
+
+
+        {/* â”€â”€ CONTROLS PANEL â”€â”€ */}
+        {/* â”€â”€ CONTROLS PANEL â”€â”€ */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', borderRadius: '18px',
           border: '1px solid rgba(255,255,255,0.08)', padding: '18px 20px',
@@ -403,7 +604,7 @@ const MicroscopeUI = () => {
 
         {/* Zoom Label */}
         <div style={{ marginTop: '14px', padding: '6px 16px', background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '20px', fontSize: '10px', color: '#00e5ff', fontWeight: 900, letterSpacing: '3px', textAlign: 'center' }}>
-          {zoomData.multiplier} — {zoomData.desc}
+          {zoomData.multiplier} â€” {zoomData.desc}
         </div>
 
         {/* Phase info card */}
@@ -416,22 +617,22 @@ const MicroscopeUI = () => {
             </div>
           ) : (
             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', fontWeight: 700, letterSpacing: '2px' }}>
-              {!rootOnSlide ? '🔭 Place specimen on stage' : zoomLevel < 40 ? '🔬 Switch to 40× or 100× to analyse cells' : 'Click a cell to identify phase'}
+              {!rootOnSlide ? 'ðŸ”­ Place specimen on stage' : zoomLevel < 40 ? 'ðŸ”¬ Switch to 40Ã— or 100Ã— to analyse cells' : 'Click a cell to identify phase'}
             </div>
           )}
         </div>
       </div>
 
-      {/* ══════════ RIGHT PANEL — Optical Eyepiece View ══════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â• RIGHT PANEL â€” Optical Eyepiece View â•â•â•â•â•â•â•â•â•â• */}
       <div style={{
         width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '24px',
         background: 'radial-gradient(ellipse at center, #0d0d1a 0%, #060608 100%)',
       }}>
         {/* Eyepiece label */}
-        <div style={{ marginBottom: '16px', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '4px', fontWeight: 700 }}>EYEPIECE VIEW — {zoomData.multiplier} OBJECTIVE</div>
+        <div style={{ marginBottom: '16px', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '4px', fontWeight: 700 }}>EYEPIECE VIEW â€” {zoomData.multiplier} OBJECTIVE</div>
 
-        {/* ── Circular Lens Viewport ── */}
+        {/* â”€â”€ Circular Lens Viewport â”€â”€ */}
         <div style={{
           position: 'relative', width: '440px', height: '440px',
           animation: isRotating ? 'lensRotatePulse 0.52s ease' : 'none',
@@ -461,7 +662,7 @@ const MicroscopeUI = () => {
               </div>
             )}
 
-            {/* Background microscope image — always visible */}
+            {/* Background microscope image â€” always visible */}
             {!isRotating && (
               <div style={{
                 position: 'absolute', inset: 0, zIndex: 1,
@@ -544,7 +745,7 @@ const MicroscopeUI = () => {
         <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.4 }}>
           <div style={{ width: '60px', height: '2px', background: '#fff' }} />
           <span style={{ fontSize: '9px', letterSpacing: '2px' }}>
-            {{ 4: '500µm', 10: '200µm', 40: '50µm', 100: '10µm' }[zoomLevel]}
+            {{ 4: '500Âµm', 10: '200Âµm', 40: '50Âµm', 100: '10Âµm' }[zoomLevel]}
           </span>
         </div>
       </div>

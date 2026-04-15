@@ -34,7 +34,7 @@ const LabRoom = () => {
   
   const wallColor = "#fff3e0";
   const floorColor = "#9e9e9e";
-  const woodColor = "#a04000";
+  const woodColor = "#3E241F"; // Solid Dark Walnut Wood
   const blueChairColor = "#1565c0";
 
   const shelfJarsData = useMemo(() => {

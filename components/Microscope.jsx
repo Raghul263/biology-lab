@@ -5,15 +5,26 @@ import useStore from '../lib/store';
 import { useComponentInteraction } from '../lib/useComponentInteraction';
 import Slide from './Slide';
 
+// Zoom level → nosepiece Y rotation so the correct lens (at 90° intervals) faces down
+const ZOOM_NOSEPIECE_ANGLE = { 1: 0, 4: 0, 10: Math.PI * 0.5, 40: Math.PI, 100: Math.PI * 1.5 };
+
 const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] }) => {
   const { toggleMicroscope, slideOnMicroscope, heldTool, setHeldTool } = useStore();
   const nearMicroscopeStage = useStore(state => state.nearMicroscopeStage);
+  const zoomLevel = useStore(state => state.zoomLevel);
   const isHeld = heldTool === 'microscope';
   const groupRef = React.useRef();
   const leftClipRef = React.useRef();
   const rightClipRef = React.useRef();
+  const nosepieceRef = React.useRef();
+  const targetNosepieceAngle = React.useRef(0);
   const { raycaster } = useThree();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
+
+  // When zoom level changes, update target nosepiece angle
+  React.useEffect(() => {
+    targetNosepieceAngle.current = ZOOM_NOSEPIECE_ANGLE[zoomLevel] ?? 0;
+  }, [zoomLevel]);
 
   const lastHeldRef = React.useRef(isHeld);
   
@@ -40,17 +51,25 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
     }
 
     // Clip Animation Logic
-    // Clips stay open (lifted) if no slide is on microscope OR if the student is currently holding a slide
     const clipsShouldBeOpen = !slideOnMicroscope || heldTool === 'slide';
-    const targetRotationX = clipsShouldBeOpen ? -0.3 : 0.02; // -0.3 is lifted, 0.02 is slightly pressing the slide
-    
-    // Smooth mechanical closing (approx 0.5s duration)
+    const targetRotationX = clipsShouldBeOpen ? -0.3 : 0.02;
     const lerpSpeed = 3.5; 
     if (leftClipRef.current) {
         leftClipRef.current.rotation.x = THREE.MathUtils.lerp(leftClipRef.current.rotation.x, targetRotationX, lerpSpeed * delta);
     }
     if (rightClipRef.current) {
         rightClipRef.current.rotation.x = THREE.MathUtils.lerp(rightClipRef.current.rotation.x, targetRotationX, lerpSpeed * delta);
+    }
+
+    // 🔄 Nosepiece Rotation Animation — smoothly spin to the selected lens
+    if (nosepieceRef.current) {
+        const target = targetNosepieceAngle.current;
+        const current = nosepieceRef.current.rotation.y;
+        // Find shortest angular path
+        let diff = target - current;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        nosepieceRef.current.rotation.y += diff * Math.min(1, 6 * delta);
     }
   });
 
@@ -226,43 +245,53 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
         )}
       </group>
 
-      {/* ─── HIGH-FIDELITY OPTICAL ASSEMBLY ─── */}
-      <group position={[0, 0.44, 0.05]} onClick={handleZoom}>
+      {/* ─── HIGH-FIDELITY OPTICAL ASSEMBLY (Clickable for Zoom) ─── */}
+      <group position={[0, 0.44, 0.05]} onPointerDown={handleZoom}
+        onPointerOver={(e) => { e.stopPropagation(); if (slideOnMicroscope) document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => (document.body.style.cursor = 'auto')}
+      >
         {/* Main Optic Body (Polished Black) */}
         <mesh castShadow position={[0, 0, 0]}>
           <cylinderGeometry args={[0.048, 0.055, 0.18, 32]} />
           <meshStandardMaterial color="#0a0a0a" roughness={0.2} metalness={0.5} />
         </mesh>
 
-        {/* Revolving Nosepiece (Chrome Tapered) */}
-        <mesh castShadow position={[0, -0.07, 0]}>
-          <cylinderGeometry args={[0.065, 0.09, 0.05, 32]} />
-          <meshStandardMaterial {...polishedSilver} />
-        </mesh>
-        
-        {/* COLOR-CODED OBJECTIVE LENSES */}
-        {[
-          { angle: 0, color: "#d32f2f", tag: "4x" },      // RED - low power
-          { angle: Math.PI * 0.7, color: "#fbc02d", tag: "10x" },  // YELLOW - med
-          { angle: Math.PI * 1.3, color: "#1976d2", tag: "40x" }   // BLUE - high
-        ].map((obj, i) => (
-          <group key={i} rotation={[0, obj.angle, 0]}>
-            <mesh position={[0.055, -0.11, 0]} rotation={[0, 0, -Math.PI / 10]}>
-              <cylinderGeometry args={[0.02, 0.016, 0.09, 16]} />
-              <meshStandardMaterial {...polishedSilver} />
-              {/* Color Identifier Ring */}
-              <mesh position={[0, 0.01, 0]}>
-                 <cylinderGeometry args={[0.021, 0.021, 0.01, 16]} />
-                 <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={1} />
-              </mesh>
-            </mesh>
-            {/* Optic Glass Tip */}
-            <mesh position={[0.059, -0.155, 0]} rotation={[0, 0, -Math.PI / 10]}>
-              <cylinderGeometry args={[0.012, 0.012, 0.002, 16]} />
-              <meshStandardMaterial {...glassMaterial} color="#ffffff" />
-            </mesh>
-          </group>
-        ))}
+        {/* Revolving Nosepiece + Objectives (animated group) */}
+        <group ref={nosepieceRef} position={[0, -0.07, 0]}>
+          {/* Nosepiece disk */}
+          <mesh castShadow>
+            <cylinderGeometry args={[0.065, 0.09, 0.05, 32]} />
+            <meshStandardMaterial {...polishedSilver} />
+          </mesh>
+
+          {/* COLOR-CODED OBJECTIVE LENSES — 4 lenses at 90° intervals */}
+          {[
+            { angle: 0,              color: "#ef5350", zoom: 4   },  // RED   - 4×
+            { angle: Math.PI * 0.5,  color: "#ffa726", zoom: 10  },  // ORANGE- 10×
+            { angle: Math.PI,        color: "#42a5f5", zoom: 40  },  // BLUE  - 40×
+            { angle: Math.PI * 1.5,  color: "#ab47bc", zoom: 100 },  // PURPLE- 100×
+          ].map((obj, i) => {
+            const isActive = zoomLevel === obj.zoom;
+            return (
+              <group key={i} rotation={[0, obj.angle, 0]}>
+                <mesh position={[0.055, -0.07, 0]} rotation={[0, 0, -Math.PI / 10]} castShadow>
+                  <cylinderGeometry args={[0.018, 0.014, 0.1, 16]} />
+                  <meshStandardMaterial color={isActive ? obj.color : "#aaa"} roughness={0.3} metalness={0.8} emissive={isActive ? obj.color : '#000'} emissiveIntensity={isActive ? 0.6 : 0} />
+                </mesh>
+                {/* Color Identifier Ring */}
+                <mesh position={[0.057, -0.065, 0]} rotation={[0, 0, -Math.PI / 10]}>
+                  <cylinderGeometry args={[0.02, 0.02, 0.008, 16]} />
+                  <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={isActive ? 2 : 0.3} />
+                </mesh>
+                {/* Optic Glass Tip */}
+                <mesh position={[0.059, -0.125, 0]} rotation={[0, 0, -Math.PI / 10]}>
+                  <cylinderGeometry args={[0.012, 0.012, 0.002, 16]} />
+                  <meshStandardMaterial {...glassMaterial} color="#ffffff" />
+                </mesh>
+              </group>
+            );
+          })}
+        </group> {/* end nosepieceRef group */}
 
         {/* Monocular Body (Polished Black) */}
         <group position={[0, 0.13, 0]}>

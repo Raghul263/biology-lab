@@ -330,9 +330,10 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
       const localPoint = meshRef.current.worldToLocal(e.point.clone());
       const distFromCenter = localPoint.length();
       
-      // If clicking far from the center (accidental click near the component), ignore it
-      // Threshold (0.22) ensures you must click the onion itself, but is forgiving enough for easy pickup
-      if (distFromCenter > 0.22) return; 
+      // Threshold ensures you must click the onion itself. 
+      // When placed, we make it much stricter (0.1) to avoid accidental pickups when clicking nearby table.
+      const pickupThreshold = onionPlacedOn ? 0.12 : 0.22;
+      if (distFromCenter > pickupThreshold) return; 
       
       // If was fixed, pop it out
       if (onionPlacedOn) {
@@ -383,26 +384,26 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
 
    return (
     <>
-      <group ref={meshRef} onPointerDown={handlePointerDown} onContextMenu={handleContextMenu}>
+      <group ref={meshRef}>
         {/* 🟢 INTERACTION ZONES */}
 
         <group>
-          {/* 🎯 SNAP/HIGHLIGHT GUIDE */}
+          {/* 🎯 SNAP/HIGHLIGHT GUIDE (Visual ONLY, no clicks) */}
           {!heldTool && (
-            <mesh position={[0, -0.09, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <mesh position={[0, -0.09, 0]} rotation={[-Math.PI / 2, 0, 0]} pointerEvents="none">
               <torusGeometry args={[0.06, 0.003, 16, 32]} />
               <meshBasicMaterial color="#00e5ff" transparent opacity={0.4} />
             </mesh>
           )}
           <mesh 
-            position={[0, onionPlacedOn ? 0.15 : 0.08, 0]}
+            position={[0, onionPlacedOn ? 0.12 : 0.08, 0]}
             onPointerDown={handlePointerDown}
             onContextMenu={handleContextMenu}
           >
             <boxGeometry args={[
-                onionPlacedOn ? 0.08 : 0.12, 
-                onionPlacedOn ? 0.1 : 0.18, 
-                onionPlacedOn ? 0.08 : 0.12
+                onionPlacedOn ? 0.06 : 0.1, 
+                onionPlacedOn ? 0.08 : 0.16, 
+                onionPlacedOn ? 0.06 : 0.1
             ]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
           </mesh>
