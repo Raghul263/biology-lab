@@ -7,111 +7,115 @@ import useStore from '../lib/store';
 // ─── Tour Content ────────────────────────────────────────────────────────────
 const TOUR_CONTENT = {
   en: {
-    intro:           "Welcome to the Virtual Biology Lab! Today we'll study Mitosis in Onion Root Tip — one of the most important practicals in biology.",
-    equipment:       "First, let's set up our equipment. We need: Water Beaker, HCl Beaker, Acetocarmine Stain, Onion Bulb, Cutting Tile, Scalpel, Forceps, Needle, Watch Glass, Fixative Vial, Dropper, Bunsen Burner, Glass Slide, Cover Slip, Filter Paper, and a Microscope.",
-    onion:           "This is the Onion Bulb (Allium cepa). Place it in the water beaker to grow fresh roots for 2–3 days. The root tips are the best place to observe mitosis because they contain meristematic cells that divide rapidly.",
-    roots:           "After root growth, use the Scalpel to cut 1–2 cm of fresh root tips. These root tips from the meristematic zone have most actively dividing cells.",
-    watchglass:      "Transfer the root tips to the Watch Glass using Forceps. The watch glass serves as a small reaction vessel for chemical treatments.",
-    fixation:        "Place the root tips in the Fixative Vial containing aceto-alcohol (1:3 ratio of acetic acid and ethyl alcohol). This preserves the cells in their current state and prevents further division.",
-    hcl:             "Transfer root tips to the watch glass. Use the Dropper to add N/10 Hydrochloric Acid (HCl). This step is called Maceration — HCl softens the cell wall by dissolving pectin in the middle lamella, making it easier to squash the tissue.",
-    heating:         "Gently heat the watch glass with the Bunsen Burner for 3–5 minutes. Moderate heating speeds up maceration without damaging the chromosomes.",
-    staining:        "Add 2–3 drops of Acetocarmine stain using the Dropper. Acetocarmine specifically stains chromosomes deep red or magenta, making them clearly visible under the microscope.",
-    slide:           "Transfer a small piece of root tip onto the Glass Slide using a needle. Place it in the center of the slide for easy observation.",
-    coverslip:       "Place a Cover Slip over the root tip. This protects the sample and creates a uniform thin layer.",
-    squash:          "Gently press the Cover Slip with the Needle or your thumb to squash the tissue. This separates cells into a monolayer, so chromosomes can be seen individually.",
-    blot:            "Place a piece of Filter Paper over the slide and press gently. This absorbs excess stain and flattens the cells further.",
-    microscope:      "Place the slide on the Microscope stage. Start with the 10X objective lens, then switch to 40X or 100X (oil immersion) for detailed observation of chromosomes.",
-    observation:     "Now observe the cells! You can see different stages of Mitosis: 🟢 Interphase (resting), 🟣 Prophase (chromatin condenses), 🔵 Metaphase (chromosomes align), 🟠 Anaphase (chromosomes separate), 🟡 Telophase (two nuclei form).",
-    result:          "Congratulations! You have successfully prepared and observed mitosis in onion root tip. The clear stages of cell division confirm that the meristematic zone is the site of active cell division. Happy experimenting! 🎉",
-    workoutNow:      "WORKOUT NOW",
-    practiceNow:     "PRACTICE NOW",
+    intro: "Welcome to the Virtual Biology Lab! Today we'll study Mitosis in Onion Root Tip using a slide-based preparation method.",
+    drycut: "First, place the Onion Bulb on the cutting tile. Use the Scalpel to cut off the old, dry roots. This encourages fresh root growth.",
+    grow: "Transfer the onion to the Water Beaker. Let it sit for 3-4 days to grow fresh, active root tips.",
+    freshcut: "Transfer the onion to the Watch Glass. Use the scalpel to cleanly cut the fresh root tips.",
+    fixative: "Use Forceps to pick up the fresh root tips and place them directly into the Fixative Vial.",
+    slide: "Place the Glass Slide on the table. Use the forceps to safely transfer the root tip from the vial onto the slide.",
+    hcl: "Using the Dropper, add Hydrochloric Acid (HCl) directly onto the root on the slide to soften the tissue.",
+    stain: "Next, use the Dropper to add Acetocarmine Stain to highlight the chromosomes.",
+    burner: "Carefully move the slide to the Bunsen Burner to gently heat the root in the acid-stain mixture, then move it back.",
+    blot: "Place Filter Paper over the root to absorb the excess acid and stain.",
+    water: "Use the Dropper to add a single drop of clean water to the stained root.",
+    coverslip: "Place a Cover Slip over the root. Use the Needle to gently adjust and firmly squash the tissue.",
+    microscope: "Finally, place the prepared slide onto the Microscope stage to observe the stages of mitosis. Congratulations! 🎉",
+    workoutNow: "WORKOUT NOW",
+    practiceNow: "PRACTICE NOW",
   },
   hi: {
-    intro:           "वर्चुअल बायोलॉजी लैब में आपका स्वागत है! आज हम प्याज की जड़ की नोक में माइटोसिस का अध्ययन करेंगे।",
-    equipment:       "पहले उपकरण सेट करें: पानी का बीकर, HCl बीकर, एसिटोकार्मिन दाग, प्याज, कटिंग टाइल, स्केलपेल, फोर्सेप्स, सुई, वॉच ग्लास, फिक्सेटिव वायल, ड्रॉपर, बुन्सेन बर्नर, ग्लास स्लाइड, कवर स्लिप, फिल्टर पेपर और माइक्रोस्कोप।",
-    onion:           "यह प्याज का बल्ब है। इसे पानी के बीकर में रखें और 2-3 दिन तक ताज़ी जड़ें उगाएं। जड़ की नोक में मेरिस्टेमेटिक कोशिकाएं होती हैं जो तेजी से विभाजित होती हैं।",
-    roots:           "जड़ उगने के बाद, स्केलपेल से 1-2 सेमी की ताजी जड़ की नोक काटें। ये नोकें सक्रिय रूप से विभाजित होने वाली कोशिकाओं से भरी होती हैं।",
-    watchglass:      "फोर्सेप्स से जड़ की नोकें वॉच ग्लास में स्थानांतरित करें। वॉच ग्लास रासायनिक उपचार के लिए एक छोटे बर्तन का काम करता है।",
-    fixation:        "जड़ की नोकें फिक्सेटिव वायल में रखें जिसमें एसिटो-अल्कोहल (1:3 अनुपात) होता है। यह कोशिकाओं को उनकी वर्तमान स्थिति में संरक्षित करता है।",
-    hcl:             "ड्रॉपर से N/10 HCl की 2-3 बूंदें वॉच ग्लास में डालें। यह मैसरेशन प्रक्रिया है — HCl कोशिका भित्ति को नरम बनाता है।",
-    heating:         "बुन्सेन बर्नर से वॉच ग्लास को 3-5 मिनट तक धीरे-धीरे गर्म करें। यह मैसरेशन को तेज करता है।",
-    staining:        "ड्रॉपर से एसिटोकार्मिन की 2-3 बूंदें डालें। यह क्रोमोसोम को गहरा लाल रंग देता है, जिससे वे माइक्रोस्कोप में स्पष्ट दिखते हैं।",
-    slide:           "जड़ की नोक का एक छोटा टुकड़ा ग्लास स्लाइड पर रखें।",
-    coverslip:       "कवर स्लिप लगाएं। यह नमूने के ऊपर रखा जाता है।",
-    squash:          "सुई या अंगूठे से कवर स्लिप को दबाएं। यह ऊतक को अलग करता है।",
-    blot:            "फिल्टर पेपर से अतिरिक्त दाग को हटाएं।",
-    microscope:      "स्लाइड को माइक्रोस्कोप पर रखें और 10X से शुरू करके 40X तक देखें।",
-    observation:     "अब कोशिकाएं देखें! माइटोसिस के चरण: इंटरफेज, प्रोफेज, मेटाफेज, एनाफेज, टेलोफेज स्पष्ट दिखेंगे।",
-    result:          "बधाई! आपने प्याज की जड़ की नोक में माइटोसिस सफलतापूर्वक देख लिया। 🎉",
-    workoutNow:      "वर्कआउट शुरू करें",
-    practiceNow:     "अभ्यास करें",
+    intro: "वर्चुअल बायोलॉजी लैब में आपका स्वागत है!",
+    drycut: "प्याज को कटिंग टाइल पर रखें। पुरानी जड़ों को स्केलपेल से काट लें।",
+    grow: "प्याज को पानी के बीकर में रखें और 3-4 दिन तक ताज़ी जड़ें उगाएं।",
+    freshcut: "प्याज को वॉच ग्लास पर रखें और ताजी जड़ों को स्केलपेल से काट लें।",
+    fixative: "जड़ों को फोर्सेप्स से उठाएं और फिक्सेटिव वायल में डालें।",
+    slide: "ग्लास स्लाइड को टेबल पर रखें और जड़ को उस पर डालें।",
+    hcl: "ड्रॉपर से जड़ पर हाइड्रोक्लोरिक एसिड (HCl) की बूंदें डालें।",
+    stain: "अब एसिटोकार्मिन दाग की बूंदें भी उस जड़ पर डालें।",
+    burner: "स्लाइड को बुन्सेन बर्नर पर धीरे से गर्म करें। फिर टेबल पर वापस लाएं।",
+    blot: "फिल्टर पेपर से स्लाइड पर मौजूद अतिरिक्त एसिड और दाग को पोंछ लें।",
+    water: "ड्रॉपर से एक बूंद साफ पानी स्लाइड पर डालें।",
+    coverslip: "जड़ पर कवर स्लिप लगाएं और सुई से दबाकर कोशिकाओं को फैलाएं।",
+    microscope: "स्लाइड को माइक्रोस्कोप पर रखें और माइटोसिस देखें। बधाई हो! 🎉",
+    workoutNow: "वर्कआउट शुरू करें",
+    practiceNow: "अभ्यास करें",
   },
   mr: {
-    intro:           "व्हर्च्युअल बायोलॉजी लॅबमध्ये स्वागत! आज आपण कांद्याच्या मुळाच्या टोकावर माइटोसिस अभ्यासू.",
-    equipment:       "साहित्य: पाण्याचा बीकर, HCl बीकर, एसिटोकार्मिन डाग, कांदा, कापण्याची टाइल, स्केलपेल, फोर्सेप्स, सुई, वॉच ग्लास, फिक्सेटिव्ह व्हायल, ड्रॉपर, बुन्सन बर्नर, काचेची स्लाइड, कव्हर स्लिप, फिल्टर पेपर आणि सूक्ष्मदर्शक.",
-    onion:           "हा कांद्याचा बल्ब आहे. 2-3 दिवस पाण्यात ठेवा. मुळाच्या टोकात मेरिस्टेमॅटिक पेशी असतात ज्या जलद विभाजित होतात.",
-    roots:           "स्केलपेलने 1-2 सेमी ताजे मुळाचे टोक कापा. या टोकांमध्ये सक्रियपणे विभाजित पेशी असतात.",
-    watchglass:      "फोर्सेप्सने मुळाचे टोक वॉच ग्लासमध्ये ठेवा.",
-    fixation:        "मुळाचे टोक फिक्सेटिव्ह व्हायलमध्ये ठेवा (एसिटो-अल्कोहोल 1:3).",
-    hcl:             "ड्रॉपरने N/10 HCl टाका. हे मॅसरेशन आहे — HCl पेशींची भित्ती मऊ करते.",
-    heating:         "बुन्सन बर्नरने वॉच ग्लास 3-5 मिनिटे हळुवारपणे गरम करा.",
-    staining:        "ड्रॉपरने एसिटोकार्मिनचे 2-3 थेंब टाका. हे गुणसूत्रे रंगवते.",
-    slide:           "मुळाचा छोटा तुकडा काचेच्या स्लाइडवर ठेवा.",
-    coverslip:       "कव्हर स्लिप लावा.",
-    squash:          "सुई किंवा अंगठ्याने दाबा. ऊतक वेगळे होते.",
-    blot:            "फिल्टर पेपरने जादा डाग काढा.",
-    microscope:      "स्लाइड सूक्ष्मदर्शकावर ठेवा. 10X ते 40X पर्यंत पहा.",
-    observation:     "पेशी पहा! माइटोसिसचे टप्पे: इंटरफेज, प्रोफेज, मेटाफेज, अ‍ॅनाफेज, टेलोफेज दिसतील.",
-    result:          "अभिनंदन! कांद्याच्या मुळाच्या टोकावर माइटोसिस यशस्वीरित्या पाहिले. 🎉",
-    workoutNow:      "वर्कआउट करा",
-    practiceNow:     "सराव करा",
+    intro: "व्हर्च्युअल बायोलॉजी लॅबमध्ये स्वागत!",
+    drycut: "कांदा कटिंग टाइलवर ठेवा. जुनी मुळे स्केलपेलने कापून काढा.",
+    grow: "कांदा पाण्याच्या बीकरमध्ये ठेवा आणि ताजी मुळे वाढवा.",
+    freshcut: "कांदा वॉच ग्लासवर ठेवा आणि ताजी मुळे स्केलपेलने कापा.",
+    fixative: "मुळे फोर्सेप्सने उचलून फिक्सेटिव्ह व्हायलमध्ये टाका.",
+    slide: "ग्लास स्लाइडवर मूळ ठेवा.",
+    hcl: "ड्रॉपरने मुळावर हायड्रोक्लोरिक आम्ल (HCl) टाका.",
+    stain: "आता एसिटोकार्मिन डाग मुळावर टाका.",
+    burner: "स्लाइड बुन्सन बर्नरवर गरम करा.",
+    blot: "फिल्टर पेपरने जादा आम्ल आणि डाग पुसून काढा.",
+    water: "ड्रॉपरने पाण्याचा एक थेंब टाका.",
+    coverslip: "कव्हर स्लिप ठेवा आणि सुईने दाबा.",
+    microscope: "स्लाइड सूक्ष्मदर्शकावर ठेवा आणि माइटोसिस पहा. अभिनंदन! 🎉",
+    workoutNow: "वर्कआउट करा",
+    practiceNow: "सराव करा",
   },
   te: {
-    intro:           "వర్చువల్ బయాలజీ ల్యాబ్కు స్వాగతం! ఈరోజు మనం ఉల్లిపాయ వేర్లలో మైటోసిస్ అధ్యయనం చేద్దాం.",
-    equipment:       "సాధనాలు: నీటి బీకర్, HCl బీకర్, అస్టోకార్మిన్ స్టెయిన్, ఉల్లిపాయ, కట్టింగ్ టైల్, స్కాల్పెల్, ఫోర్సెప్స్, సూది, వాచ్ గ్లాస్, ఫిక్సేటివ్ వైల్, డ్రాపర్, బున్సెన్ బర్నర్, గాజు స్లయిడ్, కవర్ స్లిప్, ఫిల్టర్ పేపర్, మైక్రోస్కోప్.",
-    onion:           "ఇది ఉల్లిపాయ బల్బ్. 2-3 రోజులు నీటిలో ఉంచండి. వేరు కొనల్లో మెరిస్టముటిక్ కణాలు ఉంటాయి.",
-    roots:           "స్కాల్పెల్తో 1-2 సెమీ వేర్ల కొనలు కత్తిరించండి. ఇవి చురుగ్గా విభజనలు చేసే కణాలను కలిగి ఉంటాయి.",
-    watchglass:      "ఫోర్సెప్స్ తో వేర్ల కొనలను వాచ్ గ్లాస్ లో ఉంచండి.",
-    fixation:        "వేర్ల కొనలను ఫిక్సేటివ్ వైల్ (అస్టో-ఆల్కహాల్ 1:3) లో ఉంచండి.",
-    hcl:             "డ్రాపర్తో N/10 HCl చుక్కలు వాచ్ గ్లాస్ లో వేయండి. ఇది మాసరేషన్.",
-    heating:         "బున్సెన్ బర్నర్తో వాచ్ గ్లాస్ ను 3-5 నిమిషాలు వేడి చేయండి.",
-    staining:        "డ్రాపర్తో అస్టోకార్మిన్ 2-3 చుక్కలు వేయండి. ఇది క్రోమోజోమ్లను రంగు వేస్తుంది.",
-    slide:           "వేరు కొన చిన్న ముక్కను గాజు స్లయిడ్ పై ఉంచండి.",
-    coverslip:       "కవర్ స్లిప్ ఉంచండి.",
-    squash:          "సూది లేదా బొటన వేలితో నొక్కండి.",
-    blot:            "ఫిల్టర్ పేపర్తో అదనపు స్టెయిన్ తీయండి.",
-    microscope:      "స్లయిడ్ ను మైక్రోస్కోప్ పై ఉంచండి. 10X నుండి 40X వినియోగించండి.",
-    observation:     "కణాలు పరిశీలించండి! మైటోసిస్ దశలు: ఇంటర్ఫేజ్, ప్రోఫేజ్, మెటాఫేజ్, అనాఫేజ్, టెలోఫేజ్ కనిపిస్తాయి.",
-    result:          "అభినందనలు! ఉల్లిపాయ వేర్లలో మైటోసిస్ విజయవంతంగా పరిశీలించారు. 🎉",
-    workoutNow:      "వర్కౌట్ చేయండి",
-    practiceNow:     "ప్రాక్టీస్ చేయండి",
-  },
+    intro: "వర్చువల్ బయాలజీ ల్యాబ్కు స్వాగతం!",
+    drycut: "ఉల్లిపాయను కట్టింగ్ టైల్ పై ఉంచి, పాత వేర్లను కత్తిరించండి.",
+    grow: "బీకర్ లో ఉల్లిపాయను ఉంచి కొత్త వేర్లు పెంచండి.",
+    freshcut: "వాచ్ గ్లాస్ పై ఉల్లిపాయను ఉంచి, కొత్త వేర్లను కత్తిరించండి.",
+    fixative: "వేర్లను ఫిక్సేటివ్ వైల్ లో ఉంచండి.",
+    slide: "వేరు ముక్కను గాజు స్లయిడ్ పై ఉంచండి.",
+    hcl: "హైడ్రోక్లోరిక్ ఆమ్లం (HCl) డ్రాపర్ తో వేయండి.",
+    stain: "తరువాత అస్టోకార్మిన్ స్టెయిన్ వేయండి.",
+    burner: "స్లయిడ్ ను బర్నర్ పై కొద్దిగా వేడి చేయండి.",
+    blot: "ఫिल्టర్ పೇపర్ తో అదనపు ఆమ్లం, స్టెయిన్ తుడిచేయండి.",
+    water: "నీటి చుక్కను వేయండి.",
+    coverslip: "కవర్ స్లిప్ ఉంచి, సూదితో నొక్కండి.",
+    microscope: "స్లయిడ్ ను మైక్రోస్కోప్ పై ఉంచి పరిశీలించండి. అభినందనలు! 🎉",
+    workoutNow: "వర్కౌట్ చేయండి",
+    practiceNow: "ప్రాక్టీస్ చేయండి",
+  }
 };
 
 const STEP_KEYS = [
-  'intro', 'equipment', 'onion', 'roots', 'watchglass',
-  'fixation', 'hcl', 'heating', 'staining', 'slide',
-  'coverslip', 'squash', 'blot', 'microscope', 'observation', 'result',
+  'intro', 'drycut', 'grow', 'freshcut', 'fixative',
+  'slide', 'hcl', 'stain', 'burner', 'blot',
+  'water', 'coverslip', 'microscope'
 ];
 
 const STEP_META = [
   { title: 'Welcome',          icon: '👋', highlight: null },
-  { title: 'Equipment Setup',  icon: '🧰', highlight: null },
-  { title: 'Onion Bulb',       icon: '🧅', highlight: 'onion' },
-  { title: 'Cut Root Tips',    icon: '✂️', highlight: 'scalpel' },
-  { title: 'Watch Glass',      icon: '🔵', highlight: 'watchGlass' },
+  { title: 'Trim Old Roots',   icon: '✂️', highlight: 'tile' },
+  { title: 'Grow Fresh Roots', icon: '🧅', highlight: 'waterBeaker' },
+  { title: 'Cut Root Tips',    icon: '🔪', highlight: 'watchGlass' },
   { title: 'Fixation',         icon: '🧪', highlight: 'vial' },
-  { title: 'HCl Maceration',   icon: '⚗️', highlight: 'hclBeaker' },
-  { title: 'Heating',          icon: '🔥', highlight: 'burner' },
-  { title: 'Staining',         icon: '🎨', highlight: 'stainBeaker' },
-  { title: 'Mount on Slide',   icon: '🔬', highlight: 'slide' },
-  { title: 'Cover Slip',       icon: '🪟', highlight: 'coverSlip' },
-  { title: 'Squashing',        icon: '👇', highlight: 'needle' },
-  { title: 'Blotting',         icon: '📄', highlight: 'filterPaper' },
-  { title: 'Microscope',       icon: '🔭', highlight: 'microscope' },
-  { title: 'Observation',      icon: '👁️', highlight: 'microscope' },
-  { title: 'Result',           icon: '🎉', highlight: null },
+  { title: 'Place on Slide',   icon: '🪟', highlight: 'slide' },
+  { title: 'Add HCl',          icon: '⚗️', highlight: 'hclBeaker' },
+  { title: 'Add Stain',        icon: '🎨', highlight: 'stainBeaker' },
+  { title: 'Heat the Slide',   icon: '🔥', highlight: 'burner' },
+  { title: 'Blot Excess',      icon: '📄', highlight: 'filterPaper' },
+  { title: 'Add Water Drop',   icon: '💧', highlight: 'dropper' },
+  { title: 'Squash Tissue',    icon: '👇', highlight: 'coverSlip' },
+  { title: 'Microscope View',  icon: '🔬', highlight: 'microscope' }
 ];
+
+const DEFAULT_POSITIONS = {
+  waterBeaker: [-1.2, 0.93, -0.3],
+  hclBeaker: [-1.5, 0.93, -0.3],
+  stainBeaker: [-1.5, 0.93, 0.1],
+  onion: [-0.5, 0.93, 0],
+  tile: [0, 0.93, 0.3],
+  scalpel: [0.4, 0.93, 0.5],
+  forceps: [0.6, 0.93, 0],
+  needle: [0.8, 0.93, 0.4],
+  watchGlass: [1.0, 0.93, -0.1],
+  vial: [-0.8, 0.93, 0.4],
+  dropper: [-1.3, 0.93, 0.5],
+  burner: [1.4, 0.93, 0.3],
+  slide: [0.2, 0.93, 0.5],
+  coverSlip: [0.5, 0.93, 0.6],
+  filterPaper: [-0.6, 0.93, 0.6],
+  microscope: [0, 1.0, -0.7]
+};
 
 const LANGUAGE_OPTIONS = [
   { id: 'en', name: 'English' },
@@ -121,7 +125,7 @@ const LANGUAGE_OPTIONS = [
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function GuidedTour({ onClose, onWorkout }) {
+export default function GuidedTour({ onClose, onWorkout, onPractice }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -160,13 +164,6 @@ export default function GuidedTour({ onClose, onWorkout }) {
     if (isLangOpen) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [isLangOpen]);
-
-  // Pause / resume synthesis
-  useEffect(() => {
-    if (!window.speechSynthesis) return;
-    if (isPaused) window.speechSynthesis.pause();
-    else window.speechSynthesis.resume();
-  }, [isPaused]);
 
   // ─── Speak ───
   const utteranceRef = useRef(null);
@@ -233,10 +230,24 @@ export default function GuidedTour({ onClose, onWorkout }) {
       };
 
       window.speechSynthesis.speak(utterance);
-      if (isPaused) window.speechSynthesis.pause();
     };
     if (isMountedRef.current) setTimeout(trySpeak, 50);
-  }, [voiceEnabled, language, isPaused]);
+  }, [voiceEnabled, language]);
+
+  const handleTogglePlayPause = useCallback(() => {
+    setIsPaused(p => {
+      const isNowPaused = !p;
+      if (isNowPaused) {
+        window.speechSynthesis?.cancel();
+      } else {
+        setTimeout(() => {
+          const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
+          speak(text);
+        }, 50);
+      }
+      return isNowPaused;
+    });
+  }, [language, stepIndex, speak]);
 
   // ─── Placement Animation ───
   const animatePlacement = useCallback((id, targetPos) => {
@@ -280,30 +291,140 @@ export default function GuidedTour({ onClose, onWorkout }) {
     const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
     speak(text);
     
-    // Auto-place highlighted item on the desk for a truly "guided" experience
-    const meta = STEP_META[stepIndex];
-    if (meta.highlight) {
-      const store = useStore.getState();
-      if (!store.placedComponents[meta.highlight]) {
-        // Target position on table
-        const xOffset = (Math.random() - 0.5) * 1.5;
-        const zOffset = (Math.random() - 0.5) * 0.5;
-        const targetPos = [xOffset, 0.93, zOffset];
-        
-        animatePlacement(meta.highlight, targetPos);
+    // ─── Sync experiment visual state with current step ───
+    const store = useStore.getState();
+    const states = {
+      onionPlacedOn: null, onionInBeaker: false, rootGrowthStarted: false, rootGrowthCompleted: false, onionRootsState: 'DRY',
+      rootsInWatchGlass: false, rootsRemovedFromOnion: false, rootInVial: false, rootOnSlide: false,
+      watchGlassFluid: null, watchGlassHclApplied: false, watchGlassStainApplied: false, watchGlassHeatedTime: 0,
+      fixationStarted: false, fixationCompleted: false, rootProcessingState: 'UNCUT',
+      coverSlipPlaced: false, squashed: false, squashProgress: 0, paperOnSlide: false, slideOnMicroscope: false,
+      slideFluids: [], slideHclApplied: false, slideStainApplied: false, slideWaterApplied: false, slideHeatedTime: 0
+    };
+
+    if (stepIndex >= 1) { // drycut
+      states.onionPlacedOn = 'tile';
+      states.onionRootsState = 'CUT_DRY';
+    }
+    if (stepIndex >= 2) { // grow
+      states.onionPlacedOn = 'waterBeaker'; states.onionInBeaker = true;
+      states.rootGrowthStarted = true; states.rootGrowthCompleted = true; states.onionRootsState = 'GROWN';
+    }
+    if (stepIndex >= 3) { // freshcut
+      states.onionPlacedOn = 'watchGlass';
+      states.rootsRemovedFromOnion = true; states.onionRootsState = 'CUT_FRESH';
+      states.rootsInWatchGlass = true;
+    }
+    if (stepIndex >= 4) { // fixative
+      states.rootsInWatchGlass = false; states.rootInVial = true;
+      states.fixationStarted = true; states.fixationCompleted = true; states.rootProcessingState = 'FIXED';
+    }
+    if (stepIndex >= 5) { // slide
+      states.rootInVial = false; states.rootOnSlide = true;
+    }
+    if (stepIndex >= 6) { // hcl
+      states.slideFluids = ['HCL']; states.slideHclApplied = true;
+    }
+    if (stepIndex >= 7) { // stain
+      states.slideFluids = ['HCL', 'STAIN']; states.slideStainApplied = true; states.rootProcessingState = 'STAINED';
+    }
+    if (stepIndex >= 8) { // burner
+      states.slideHeatedTime = 100; states.rootProcessingState = 'MACERATED';
+    }
+    if (stepIndex >= 9) { // blot
+      states.paperOnSlide = true;
+    }
+    if (stepIndex >= 10) { // water
+      states.paperOnSlide = false;
+      states.slideFluids = ['HCL', 'STAIN', 'WATER']; states.slideWaterApplied = true;
+    }
+    if (stepIndex >= 11) { // coverslip
+      states.coverSlipPlaced = true;
+      states.squashed = true; states.squashProgress = 1;
+    }
+    if (stepIndex >= 12) { // microscope
+      states.slideOnMicroscope = true;
+    }
+    
+    // Delayed state application so items land before snapping together
+    // store.setStates(states); 
+
+    // ─── Component Requirements per Step ───
+    const stepRequirements = {
+      1: ['onion', 'tile', 'scalpel'],
+      2: ['waterBeaker'],
+      3: ['watchGlass'],
+      4: ['vial', 'forceps'],
+      5: ['slide'],
+      6: ['hclBeaker', 'dropper'],
+      7: ['stainBeaker'],
+      8: ['burner'],
+      9: ['filterPaper'],
+      10: [], // water drop reusing dropper
+      11: ['coverSlip', 'needle'],
+      12: ['microscope']
+    };
+
+    const requiredItems = new Set();
+    const currentStepItems = [];
+
+    for (let i = 0; i <= stepIndex; i++) {
+      if (stepRequirements[i]) {
+        stepRequirements[i].forEach(item => {
+           if (i === stepIndex) {
+              currentStepItems.push(item);
+           } else {
+              requiredItems.add(item);
+           }
+        });
       }
     }
 
+    // Force place all prior required items
+    const newPlaced = { ...store.placedComponents };
+    let needsStoreUpdate = false;
+    requiredItems.forEach(item => {
+      if (!newPlaced[item]) {
+         newPlaced[item] = true;
+         store.setSetupPosition(item, DEFAULT_POSITIONS[item]);
+         needsStoreUpdate = true;
+      }
+    });
+
+    if (needsStoreUpdate) {
+      store.setStates({ placedComponents: newPlaced });
+    }
+
+    let hasAnimations = false;
+    // Animate the new items for the CURRENT step
+    currentStepItems.forEach((item, idx) => {
+      if (!store.placedComponents[item] && !requiredItems.has(item)) {
+         hasAnimations = true;
+         setTimeout(() => {
+           animatePlacement(item, DEFAULT_POSITIONS[item]);
+         }, idx * 300);
+      }
+    });
+
+    // Wait for fly-ins to finish before applying physical simulation steps
+    const stateDelay = hasAnimations ? 1400 : 0;
+    const tState = setTimeout(() => {
+      store.setStates(states);
+    }, stateDelay);
+
     const t = setTimeout(() => setIsAnimating(false), 400);
-    return () => clearTimeout(t);
+    return () => {
+       clearTimeout(t);
+       clearTimeout(tState);
+    };
   }, [stepIndex, language, speak]);
 
   // ─── Space bar ───
   useEffect(() => {
-    const handler = (e) => { if (e.code === 'Space') { e.preventDefault(); setIsPaused(p => !p); } };
+    const handler = (e) => { if (e.code === 'Space') { e.preventDefault(); handleTogglePlayPause(); } };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [handleTogglePlayPause]);
 
   const currentText = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
   const currentMeta = STEP_META[stepIndex];
@@ -394,25 +515,7 @@ export default function GuidedTour({ onClose, onWorkout }) {
               {currentMeta.title}
             </div>
           </div>
-          {/* Close */}
-          <button
-            className="tour-btn"
-            onClick={() => {
-              if (window.speechSynthesis) window.speechSynthesis.cancel();
-              onClose();
-            }}
-            style={{
-              marginLeft: 'auto',
-              padding: '6px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: '8px',
-              color: 'rgba(255,255,255,0.5)',
-              display: 'flex',
-            }}
-          >
-            <X size={14} />
-          </button>
+
         </div>
 
         {/* Divider */}
@@ -590,7 +693,7 @@ export default function GuidedTour({ onClose, onWorkout }) {
           <button
             className="tour-btn"
             disabled={isFirst}
-            onClick={() => { if (!isFirst) { window.speechSynthesis?.cancel(); setStepIndex(i => i - 1); } }}
+            onClick={() => { if (!isFirst) { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i => i - 1); } }}
             style={{
               padding: '5px',
               color: isFirst ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)',
@@ -603,7 +706,7 @@ export default function GuidedTour({ onClose, onWorkout }) {
 
           <button
             className="tour-btn"
-            onClick={() => setIsPaused(p => !p)}
+            onClick={handleTogglePlayPause}
             style={{
               padding: '8px',
               background: 'rgba(74,222,128,0.12)',
@@ -619,7 +722,7 @@ export default function GuidedTour({ onClose, onWorkout }) {
           <button
             className="tour-btn"
             disabled={isLast}
-            onClick={() => { if (!isLast) { window.speechSynthesis?.cancel(); setStepIndex(i => i + 1); } }}
+            onClick={() => { if (!isLast) { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i => i + 1); } }}
             style={{
               padding: '5px',
               color: isLast ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)',
@@ -652,7 +755,7 @@ export default function GuidedTour({ onClose, onWorkout }) {
           {STEP_KEYS.map((_, i) => (
             <button
               key={i}
-              onClick={() => { window.speechSynthesis?.cancel(); setStepIndex(i); }}
+              onClick={() => { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i); }}
               style={{
                 height: '6px',
                 width: i === stepIndex ? '18px' : '6px',

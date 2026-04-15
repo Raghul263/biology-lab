@@ -2,13 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
-const CELLS = [
-  { phase: 'Interphase', color: '#4ade80', emoji: '🔬' },
-  { phase: 'Prophase', color: '#60a5fa', emoji: '🧬' },
-  { phase: 'Metaphase', color: '#f472b6', emoji: '⚗️' },
-  { phase: 'Anaphase', color: '#fb923c', emoji: '🔭' },
-  { phase: 'Telophase', color: '#a78bfa', emoji: '🧪' },
-];
+
 
 function FloatingCell({ x, y, size, color, delay, duration }) {
   return (
@@ -29,7 +23,7 @@ function FloatingCell({ x, y, size, color, delay, duration }) {
   );
 }
 
-export default function LandingScreen({ onTour, onWorkout }) {
+export default function LandingScreen({ onTour, onPractice, onWorkout }) {
   const [hovered, setHovered] = useState(null);
   const [mounted, setMounted] = useState(false);
 
@@ -38,14 +32,14 @@ export default function LandingScreen({ onTour, onWorkout }) {
   }, []);
 
   const floatingCells = [
-    { x: 5, y: 15, size: '120px', color: '#4ade80', delay: 0, duration: 6 },
-    { x: 88, y: 8, size: '80px', color: '#60a5fa', delay: 1.5, duration: 7 },
-    { x: 3, y: 70, size: '60px', color: '#f472b6', delay: 0.8, duration: 5.5 },
-    { x: 92, y: 65, size: '100px', color: '#fb923c', delay: 2, duration: 8 },
-    { x: 45, y: 88, size: '70px', color: '#a78bfa', delay: 1, duration: 6.5 },
-    { x: 70, y: 75, size: '50px', color: '#4ade80', delay: 3, duration: 5 },
-    { x: 20, y: 40, size: '40px', color: '#60a5fa', delay: 2.5, duration: 7.5 },
-    { x: 78, y: 35, size: '55px', color: '#f472b6', delay: 0.5, duration: 6 },
+    { x: 5, y: 15, size: '120px', color: '#14b8a6', delay: 0, duration: 6 },
+    { x: 88, y: 8, size: '80px', color: '#0d9488', delay: 1.5, duration: 7 },
+    { x: 3, y: 70, size: '60px', color: '#0f766e', delay: 0.8, duration: 5.5 },
+    { x: 92, y: 65, size: '100px', color: '#115e59', delay: 2, duration: 8 },
+    { x: 45, y: 88, size: '70px', color: '#2dd4bf', delay: 1, duration: 6.5 },
+    { x: 70, y: 75, size: '50px', color: '#134e4a', delay: 3, duration: 5 },
+    { x: 20, y: 40, size: '40px', color: '#0d9488', delay: 2.5, duration: 7.5 },
+    { x: 78, y: 35, size: '55px', color: '#0f766e', delay: 0.5, duration: 6 },
   ];
 
   return (
@@ -138,28 +132,7 @@ export default function LandingScreen({ onTour, onWorkout }) {
         pointerEvents: 'none',
       }} />
 
-      {/* Orbiting dots */}
-      {CELLS.map((cell, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          width: '8px',
-          height: '8px',
-          marginTop: '-4px',
-          marginLeft: '-4px',
-          animation: `rotateOrbit ${8 + i * 2}s linear ${i * 1.2}s infinite`,
-          transformOrigin: '0 0',
-        }}>
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: cell.color,
-            boxShadow: `0 0 8px ${cell.color}`,
-          }} />
-        </div>
-      ))}
+
 
       {/* Main content */}
       <div style={{
@@ -230,41 +203,20 @@ export default function LandingScreen({ onTour, onWorkout }) {
             lineHeight: 1.6,
             letterSpacing: '0.2px',
           }}>
-            Observe the stages of cell division — Prophase, Metaphase, Anaphase & Telophase — in a virtual 3D laboratory
+            Observe the stages of cell division in a virtual 3D laboratory
           </p>
         </div>
 
-        {/* Mitosis phase pills */}
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          animation: 'fadeSlideUp 0.7s ease-out 0.3s both',
-        }}>
-          {CELLS.map((cell) => (
-            <div key={cell.phase} style={{
-              padding: '4px 12px',
-              background: `${cell.color}15`,
-              border: `1px solid ${cell.color}30`,
-              borderRadius: '100px',
-              fontSize: '11px',
-              fontWeight: 600,
-              color: cell.color,
-              letterSpacing: '0.5px',
-            }}>
-              {cell.phase}
-            </div>
-          ))}
-        </div>
 
-        {/* Button pair */}
+
+        {/* Button layout */}
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
           gap: '16px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
+          alignItems: 'center',
           animation: 'fadeSlideUp 0.8s ease-out 0.4s both',
+          width: '100%',
         }}>
 
           {/* Guided Tour Button */}
@@ -289,7 +241,8 @@ export default function LandingScreen({ onTour, onWorkout }) {
               boxShadow: hovered === 'tour'
                 ? '0 16px 40px rgba(34,197,94,0.45), 0 0 0 1px rgba(34,197,94,0.3)'
                 : '0 8px 24px rgba(34,197,94,0.25), 0 0 0 1px rgba(34,197,94,0.2)',
-              minWidth: '200px',
+              width: '100%',
+              maxWidth: '416px',
               justifyContent: 'center',
             }}
           >
@@ -300,50 +253,78 @@ export default function LandingScreen({ onTour, onWorkout }) {
             </div>
           </button>
 
-          {/* Workout Button */}
-          <button
-            className="landing-btn"
-            onMouseEnter={() => setHovered('workout')}
-            onMouseLeave={() => setHovered(null)}
-            onClick={onWorkout}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px 32px',
-              background: hovered === 'workout'
-                ? 'rgba(255,255,255,0.12)'
-                : 'rgba(255,255,255,0.06)',
-              borderRadius: '16px',
-              color: 'white',
-              fontSize: '15px',
-              fontWeight: 700,
-              letterSpacing: '0.3px',
-              boxShadow: hovered === 'workout'
-                ? '0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.2)'
-                : '0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.12)',
-              minWidth: '200px',
-              justifyContent: 'center',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <span style={{ fontSize: '20px' }}>🧪</span>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '15px', fontWeight: 800 }}>Workout Lab</div>
-              <div style={{ fontSize: '11px', fontWeight: 400, opacity: 0.7 }}>Perform the experiment freely</div>
-            </div>
-          </button>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {/* Practice Button */}
+            <button
+              className="landing-btn"
+              onMouseEnter={() => setHovered('practice')}
+              onMouseLeave={() => setHovered(null)}
+              onClick={onPractice}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px 24px',
+                background: hovered === 'practice'
+                  ? 'linear-gradient(135deg, #14b8a6, #0d9488)'
+                  : 'linear-gradient(135deg, #0d9488, #0f766e)',
+                borderRadius: '16px',
+                color: 'white',
+                fontSize: '15px',
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                boxShadow: hovered === 'practice'
+                  ? '0 16px 40px rgba(20,184,166,0.45), 0 0 0 1px rgba(20,184,166,0.3)'
+                  : '0 8px 24px rgba(13,148,136,0.25), 0 0 0 1px rgba(13,148,136,0.2)',
+                minWidth: '200px',
+                justifyContent: 'flex-start',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>📘</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '15px', fontWeight: 800 }}>Practice Mode</div>
+                <div style={{ fontSize: '11px', fontWeight: 400, opacity: 0.8 }}>With hints and guidance</div>
+              </div>
+            </button>
+
+            {/* Workout Button */}
+            <button
+              className="landing-btn"
+              onMouseEnter={() => setHovered('workout')}
+              onMouseLeave={() => setHovered(null)}
+              onClick={onWorkout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '16px 24px',
+                background: hovered === 'workout'
+                  ? 'rgba(74,222,128,0.12)'
+                  : 'rgba(74,222,128,0.06)',
+                borderRadius: '16px',
+                color: 'white',
+                fontSize: '15px',
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                boxShadow: hovered === 'workout'
+                  ? '0 16px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(74,222,128,0.3)'
+                  : '0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(74,222,128,0.15)',
+                minWidth: '200px',
+                justifyContent: 'flex-start',
+                backdropFilter: 'blur(12px)',
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>🧪</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '15px', fontWeight: 800 }}>Workout Lab</div>
+                <div style={{ fontSize: '11px', fontWeight: 400, opacity: 0.7 }}>Perform freely without hints</div>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Footer note */}
-        <p style={{
-          fontSize: '12px',
-          color: 'rgba(255,255,255,0.2)',
-          margin: 0,
-          animation: 'fadeSlideUp 0.8s ease-out 0.5s both',
-        }}>
-          🎓 CBSE / ICSE Biology Practical · Class XI
-        </p>
+
       </div>
 
       {/* Bottom accent line */}
