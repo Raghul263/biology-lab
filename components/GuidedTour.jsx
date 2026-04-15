@@ -249,39 +249,57 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
     });
   }, [language, stepIndex, speak]);
 
-  // ─── Placement Animation ───
+  // ─── Placement Animation (Initial fly in) ───
   const animatePlacement = useCallback((id, targetPos) => {
-    const startPos = [-4, 3, targetPos[2]]; // Fly in from left-top
+    const startPos = [-4, 3, targetPos[2]];
     const store = useStore.getState();
-    
-    // Initial jump to start position
     store.setSetupPosition(id, startPos);
     store.setPlaced(id, true);
-    
     const startTime = performance.now();
-    const duration = 1000; // 1 second flight
-
+    const duration = 1000;
     const tick = (now) => {
       if (!isMountedRef.current) return;
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // Elastic-ish ease out
       const ease = 1 - Math.pow(1 - progress, 4);
-      
       const currentPos = [
         startPos[0] + (targetPos[0] - startPos[0]) * ease,
         startPos[1] + (targetPos[1] - startPos[1]) * ease,
         startPos[2] + (targetPos[2] - startPos[2]) * ease
       ];
-      
       useStore.getState().setSetupPosition(id, currentPos);
-      
-      if (progress < 1) {
-        requestAnimationFrame(tick);
-      }
+      if (progress < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
+  }, []);
+
+  // ─── Puppeteer / Video Autoplay Engine ───
+  const activeSequenceVersion = useRef(0);
+  
+  const tweenItem = useCallback((id, targetPos, duration = 600, versionToken) => {
+    return new Promise(resolve => {
+       const store = useStore.getState();
+       const startPos = store.setupPositions[id] || DEFAULT_POSITIONS[id];
+       // Immediately ensure placed
+       if (!store.placedComponents[id]) store.setPlaced(id, true);
+       const startTime = performance.now();
+       const tick = (now) => {
+           if (!isMountedRef.current || activeSequenceVersion.current !== versionToken) {
+               resolve(); return; // Abort if cancelled or step changed
+           }
+           const prog = Math.min((now - startTime) / duration, 1);
+           const ease = 1 - Math.pow(1 - prog, 3);
+           const curPos = [
+              startPos[0] + (targetPos[0] - startPos[0]) * ease,
+              startPos[1] + (targetPos[1] - startPos[1]) * ease,
+              startPos[2] + (targetPos[2] - startPos[2]) * ease
+           ];
+           store.setSetupPosition(id, curPos);
+           if (prog < 1) requestAnimationFrame(tick);
+           else resolve();
+       };
+       requestAnimationFrame(tick);
+    });
   }, []);
 
   // ─── Trigger narration on step change ───
@@ -291,8 +309,12 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
     const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
     speak(text);
     
-    // ─── Sync experiment visual state with current step ───
+    // Track versions to abort previous overlapping tweens
+    activeSequenceVersion.current += 1;
+    const vToken = activeSequenceVersion.current;
     const store = useStore.getState();
+
+    // ─── Full Required State Compiler ───
     const states = {
       onionPlacedOn: null, onionInBeaker: false, rootGrowthStarted: false, rootGrowthCompleted: false, onionRootsState: 'DRY',
       rootsInWatchGlass: false, rootsRemovedFromOnion: false, rootInVial: false, rootOnSlide: false,
@@ -380,42 +402,134 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
       }
     }
 
-    // Force place all prior required items
+    // Immediately set all previously REQUIRED components permanently onto table, and base states up to this point
     const newPlaced = { ...store.placedComponents };
-    let needsStoreUpdate = false;
     requiredItems.forEach(item => {
-      if (!newPlaced[item]) {
-         newPlaced[item] = true;
-         store.setSetupPosition(item, DEFAULT_POSITIONS[item]);
-         needsStoreUpdate = true;
-      }
+      if (!newPlaced[item]) newPlaced[item] = true;
+      store.setSetupPosition(item, DEFAULT_POSITIONS[item]);
     });
-
-    if (needsStoreUpdate) {
-      store.setStates({ placedComponents: newPlaced });
-    }
+    store.setStates({ placedComponents: newPlaced });
 
     let hasAnimations = false;
-    // Animate the new items for the CURRENT step
+    // Initial fly-ins for NEW objects this step!
     currentStepItems.forEach((item, idx) => {
       if (!store.placedComponents[item] && !requiredItems.has(item)) {
          hasAnimations = true;
-         setTimeout(() => {
-           animatePlacement(item, DEFAULT_POSITIONS[item]);
-         }, idx * 300);
+         setTimeout(() => { animatePlacement(item, DEFAULT_POSITIONS[item]); }, idx * 250);
       }
     });
 
-    // Wait for fly-ins to finish before applying physical simulation steps
-    const stateDelay = hasAnimations ? 1400 : 0;
-    const tState = setTimeout(() => {
-      store.setStates(states);
-    }, stateDelay);
+    const wait = (ms) => new Promise(res => setTimeout(res, ms));
+
+    const check = () => vToken === activeSequenceVersion.current;
+
+    // ─── Play choreographed continuous animation cutscene  ───
+    const playCutscene = async () => {
+      // 1) Wait for fly ins (reduced gap so items smoothly transition into actions mid-flight!)
+      if (hasAnimations) await wait(600);
+      if (!check()) return;
+
+      const D = DEFAULT_POSITIONS;
+      
+      if (stepIndex === 1) { // dry cut
+         await tweenItem('onion', [D.tile[0], 1.1, D.tile[2]], 800, vToken);
+         if (!check()) return; store.setStates({ onionPlacedOn: 'tile' });
+         await tweenItem('scalpel', [D.tile[0]+0.1, 1.0, D.tile[2]], 900, vToken);
+         await tweenItem('scalpel', [D.tile[0]-0.05, 0.95, D.tile[2]], 500, vToken); // slice
+         if (!check()) return; store.setStates({ onionRootsState: 'CUT_DRY' });
+         await tweenItem('scalpel', D.scalpel, 900, vToken);
+      }
+      else if (stepIndex === 2) { // grow
+         store.setStates({ onionPlacedOn: null });
+         await tweenItem('onion', [D.waterBeaker[0], 1.2, D.waterBeaker[2]], 1000, vToken);
+         if (!check()) return;
+         store.setStates({ onionPlacedOn: 'waterBeaker', rootGrowthStarted: true, rootGrowthCompleted: true, onionRootsState: 'GROWN' });
+      }
+      else if (stepIndex === 3) { // fresh cut
+         store.setStates({ onionPlacedOn: null, onionRootsState: 'GROWN' });
+         await tweenItem('onion', [D.watchGlass[0], 1.1, D.watchGlass[2]], 1000, vToken);
+         if (!check()) return; store.setStates({ onionPlacedOn: 'watchGlass' });
+         await tweenItem('scalpel', [D.watchGlass[0]+0.1, 1.0, D.watchGlass[2]], 900, vToken);
+         await tweenItem('scalpel', [D.watchGlass[0]-0.05, 0.95, D.watchGlass[2]], 500, vToken);
+         if (!check()) return; store.setStates({ rootsRemovedFromOnion: true, onionRootsState: 'CUT_FRESH', rootsInWatchGlass: true });
+         await tweenItem('scalpel', D.scalpel, 900, vToken);
+      }
+      else if (stepIndex === 4) { // fixative
+         await tweenItem('forceps', [D.watchGlass[0], 0.95, D.watchGlass[2]], 900, vToken);
+         if (!check()) return; store.setStates({ rootsInWatchGlass: false });
+         await tweenItem('forceps', [D.vial[0], 1.05, D.vial[2]], 900, vToken);
+         await tweenItem('forceps', [D.vial[0], 0.95, D.vial[2]], 500, vToken);
+         if (!check()) return; store.setStates({ rootInVial: true, fixationStarted: true, fixationCompleted: true, rootProcessingState: 'FIXED' });
+         await tweenItem('forceps', D.forceps, 900, vToken);
+      }
+      else if (stepIndex === 5) { // slide
+         await tweenItem('forceps', [D.vial[0], 0.95, D.vial[2]], 900, vToken);
+         if (!check()) return; store.setStates({ rootInVial: false });
+         await tweenItem('forceps', [D.slide[0], 0.98, D.slide[2]], 1000, vToken);
+         if (!check()) return; store.setStates({ rootOnSlide: true });
+         await tweenItem('forceps', D.forceps, 900, vToken);
+      }
+      else if (stepIndex === 6) { // hcl
+         await tweenItem('dropper', [D.hclBeaker[0], 1.2, D.hclBeaker[2]], 900, vToken);
+         await wait(200);
+         await tweenItem('dropper', [D.slide[0], 1.05, D.slide[2]], 1000, vToken);
+         await tweenItem('dropper', [D.slide[0], 0.98, D.slide[2]], 500, vToken); // drop
+         if (!check()) return; store.setStates({ slideFluids: ['HCL'], slideHclApplied: true });
+         await tweenItem('dropper', D.dropper, 900, vToken);
+      }
+      else if (stepIndex === 7) { // stain
+         await tweenItem('dropper', [D.stainBeaker[0], 1.2, D.stainBeaker[2]], 900, vToken);
+         await wait(200);
+         await tweenItem('dropper', [D.slide[0], 1.05, D.slide[2]], 1000, vToken);
+         await tweenItem('dropper', [D.slide[0], 0.98, D.slide[2]], 500, vToken);
+         if (!check()) return; store.setStates({ slideFluids: ['HCL', 'STAIN'], slideStainApplied: true, rootProcessingState: 'STAINED' });
+         await tweenItem('dropper', D.dropper, 900, vToken);
+      }
+      else if (stepIndex === 8) { // burner
+         await tweenItem('slide', [D.burner[0], 1.1, D.burner[2]], 1000, vToken);
+         await wait(1200); // Heating 
+         if (!check()) return; store.setStates({ slideHeatedTime: 100, rootProcessingState: 'MACERATED' });
+         await tweenItem('slide', D.slide, 1000, vToken);
+      }
+      else if (stepIndex === 9) { // blot
+         await tweenItem('filterPaper', [D.slide[0], 0.95, D.slide[2]], 900, vToken);
+         if (!check()) return; store.setStates({ paperOnSlide: true });
+         await wait(800);
+         if (!check()) return; store.setStates({ paperOnSlide: false });
+         await tweenItem('filterPaper', D.filterPaper, 900, vToken);
+      }
+      else if (stepIndex === 10) { // water drop
+         await tweenItem('dropper', [D.waterBeaker[0], 1.2, D.waterBeaker[2]], 900, vToken);
+         await wait(200);
+         await tweenItem('dropper', [D.slide[0], 1.05, D.slide[2]], 1000, vToken);
+         await tweenItem('dropper', [D.slide[0], 0.98, D.slide[2]], 500, vToken);
+         if (!check()) return; store.setStates({ slideFluids: ['HCL', 'STAIN', 'WATER'], slideWaterApplied: true });
+         await tweenItem('dropper', D.dropper, 900, vToken);
+      }
+      else if (stepIndex === 11) { // coverslip & squash
+         await tweenItem('coverSlip', [D.slide[0], 0.95, D.slide[2]], 900, vToken);
+         if (!check()) return; store.setStates({ coverSlipPlaced: true });
+         await tweenItem('needle', [D.slide[0], 0.98, D.slide[2]], 800, vToken);
+         await tweenItem('needle', [D.slide[0], 0.93, D.slide[2]], 500, vToken); // squash push
+         if (!check()) return; store.setStates({ squashed: true, squashProgress: 1 });
+         await tweenItem('needle', D.needle, 800, vToken);
+      }
+      else if (stepIndex === 12) { // microscope
+         await tweenItem('slide', [D.microscope[0], 1.2, D.microscope[2]], 1200, vToken);
+         if (!check()) return; store.setStates({ slideOnMicroscope: true });
+         await tweenItem('slide', [D.microscope[0], -5.0, D.microscope[2]], 10, vToken); // Hide slide
+      }
+
+      // Final fallback to ensure everything is set (even if skipped half-way)
+      if (check()) store.setStates(states);
+    };
+
+    playCutscene();
 
     const t = setTimeout(() => setIsAnimating(false), 400);
     return () => {
+       activeSequenceVersion.current += 1; // Unmount cancels running sequence
        clearTimeout(t);
-       clearTimeout(tState);
     };
   }, [stepIndex, language, speak]);
 
