@@ -33,6 +33,9 @@ const Beaker = ({ position: initialPosition = [-1.2, 0.93, -0.3] }) => {
       setHeldTool(null);
     } else if (heldTool === 'dropper') {
       setStates({ dropperContents: 'WATER' });
+    } else if (heldTool === 'onion') {
+      setStates({ onionPlacedOn: 'beakerTop' });
+      setHeldTool(null);
     } else if (!heldTool) {
       setHeldTool('waterBeaker');
     }

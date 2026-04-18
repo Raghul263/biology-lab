@@ -78,9 +78,10 @@ const Tile = ({ position: initialPosition = [0, 0.93, 0.3] }) => {
         <boxGeometry args={[0.5, 0.02, 0.5]} />
         <meshStandardMaterial color="#34495e" roughness={0.4} metalness={0.1} />
       </mesh>
-      <mesh position={[0, 0.05, 0]}>
-        <boxGeometry args={[0.55, 0.1, 0.55]} />
-        <meshBasicMaterial transparent opacity={0} />
+      {/* Flat interaction zone only at the base level to prevent "swallowing" items on top */}
+      <mesh position={[0, 0.01, 0]}>
+        <boxGeometry args={[0.55, 0.04, 0.55]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
   );

@@ -98,7 +98,7 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
 
       let cutTriggered = false;
       if (onionRootsState !== 'CUT_DRY' && onionRootsState !== 'CUT_FRESH' && !rootsRemovedFromOnion) {
-        if (nearOnion || hoveredComponent === 'onion') { 
+        if (nearOnion || hoveredComponent === 'onion' || hoveredComponent === 'onion_roots') { 
           setStates({ isCutting: true, cutStartTime: Date.now() });
           cutTriggered = true;
         }
@@ -155,16 +155,7 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
       onPointerOut={() => (document.body.style.cursor = 'auto')}
     >
       {/* 🔴 INTERACTION ZONE: While held, this captures the user's "Fix" click anywhere on the table */}
-      {isHeld && (
-        <mesh 
-          position={[0, 0, 0]} 
-          onPointerDown={handleClick}
-          onPointerOver={() => { document.body.style.cursor = 'cell'; }}
-        >
-          <planeGeometry args={[6.0, 6.0]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-        </mesh>
-      )}
+      {/* Removed the giant plane that was blocking interactions. Table and Onion now catch clicks directly. */}
 
       <group 
         rotation={[Math.PI / 2, 0, 0]} 

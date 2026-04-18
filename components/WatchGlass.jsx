@@ -66,6 +66,10 @@ const WatchGlass = ({ position: initialPosition = [1.0, 0.93, -0.1] }) => {
         }
     } else if (heldTool === 'dropper') {
       // Logic moved to Dropper.jsx, but we can keep visuals synced
+    } else if (heldTool === 'onion') {
+        const { setStates } = useStore.getState();
+        setStates({ onionPlacedOn: 'watchGlass' });
+        setHeldTool(null);
     }
   };
 

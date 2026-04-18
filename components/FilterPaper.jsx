@@ -107,7 +107,6 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
       // Normal Squash logic (if cleaned and covered)
       if (dist < 0.25 && store.rootOnSlide && store.coverSlipPlaced && store.stainRemoved) {
         setStates({ squashed: true });
-        store.showWrongAction("Root squashed successfully. Specimen is ready!");
       }
 
       store.setSetupPosition('filterPaper', [pos.x, 0.93, pos.z]);

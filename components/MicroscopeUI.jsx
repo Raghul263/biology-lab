@@ -8,7 +8,7 @@ import * as THREE from 'three';
 const PHASES = {
   Interphase: {
     name: 'Interphase', color: '#7c3aed',
-    label: 'Interphase â€“ chromosomes are thin and nucleus is clear',
+    label: 'Interphase - chromosomes are thin and nucleus is clear',
     description: 'Cell in normal metabolic state. DNA is uncoiled as chromatin. Nucleus is clearly visible with a prominent nucleolus.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -20,7 +20,7 @@ const PHASES = {
   },
   Prophase: {
     name: 'Prophase', color: '#c2185b',
-    label: 'Prophase â€“ chromatin condenses into visible chromosomes',
+    label: 'Prophase - chromatin condenses into visible chromosomes',
     description: 'Chromatin condenses into discrete chromosomes. Nuclear envelope begins breaking down.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -33,7 +33,7 @@ const PHASES = {
   },
   Metaphase: {
     name: 'Metaphase', color: '#d32f2f',
-    label: 'Metaphase â€“ chromosomes aligned at center plate',
+    label: 'Metaphase - chromosomes aligned at center plate',
     description: 'Chromosomes align along the equatorial plate. Spindle fibers attach to centromeres.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${70 * scale}px` }}>
@@ -46,7 +46,7 @@ const PHASES = {
   },
   Anaphase: {
     name: 'Anaphase', color: '#e64a19',
-    label: 'Anaphase â€“ sister chromatids pulling to opposite poles',
+    label: 'Anaphase - sister chromatids pulling to opposite poles',
     description: 'Centromeres split and sister chromatids are pulled toward opposite poles.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${75 * scale}px` }}>
@@ -62,7 +62,7 @@ const PHASES = {
   },
   Telophase: {
     name: 'Telophase', color: '#388e3c',
-    label: 'Telophase â€“ two new daughter nuclei forming',
+    label: 'Telophase - two new daughter nuclei forming',
     description: 'Nuclear envelopes reform. Chromosomes decondense. Cytokinesis begins.',
     renderCell: (scale, stained) => (
       <div style={{ position: 'relative', width: `${60 * scale}px`, height: `${80 * scale}px` }}>
@@ -77,10 +77,10 @@ const PHASES = {
 
 // â”€â”€â”€ Zoom level config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ZOOM_CONFIG = {
-  4:   { label: '4X',   multiplier: '4Ã—',   desc: 'Overview â€“ Root tissue architecture', cellCount: 0, scale: 0.45, imgKey: '4x'  },
-  10:  { label: '10X',  multiplier: '10Ã—',  desc: 'Low Power â€“ Tissue differentiation', cellCount: 18, scale: 0.72, imgKey: '10x' },
-  40:  { label: '40X',  multiplier: '40Ã—',  desc: 'High Power â€“ Cellular detail',       cellCount: 8, scale: 1.2, imgKey: '40x' },
-  100: { label: '100X', multiplier: '100Ã—', desc: 'Oil Immersion â€“ Chromosome analysis',cellCount: 4, scale: 2.0, imgKey: '100x'},
+  4:   { label: '4X',   multiplier: '4x',   desc: 'Overview - Root tissue architecture', cellCount: 0, scale: 0.45, imgKey: '4x'  },
+  10:  { label: '10X',  multiplier: '10x',  desc: 'Low Power - Tissue differentiation', cellCount: 18, scale: 0.72, imgKey: '10x' },
+  40:  { label: '40X',  multiplier: '40x',  desc: 'High Power - Cellular detail',       cellCount: 8, scale: 1.2, imgKey: '40x' },
+  100: { label: '100X', multiplier: '100x', desc: 'Oil Immersion - Chromosome analysis',cellCount: 4, scale: 2.0, imgKey: '100x'},
 };
 const ZOOM_ORDER = [4, 10, 40, 100];
 
@@ -88,7 +88,7 @@ const ZOOM_ORDER = [4, 10, 40, 100];
 const LENS_COLORS = { 4: '#ef5350', 10: '#ffa726', 40: '#42a5f5', 100: '#ab47bc' };
 const NOSEPIECE_ANGLES = { 4: 0, 10: Math.PI * 0.5, 40: Math.PI, 100: Math.PI * 1.5 };
 
-function MicroscopeModel({ zoomLevel, focusValue = 0.5 }) {
+function MicroscopeModel({ zoomLevel, focusValue = 0.5, lightValue = 0.75 }) {
   const nosepieceRef = useRef();
   const targetAngle = useRef(0);
   const mat = { roughness: 0.3, metalness: 0.8 };
@@ -112,66 +112,79 @@ function MicroscopeModel({ zoomLevel, focusValue = 0.5 }) {
   ];
 
   return (
-    <group rotation={[0.1, 0.5, 0]} position={[0, -0.1, 0]}>
-      {/* BASE */}
+    <group rotation={[0.1, 0.5, 0]} position={[0, 0.12, 0]}>
+      {/* BASE (Deep Blue side with light top) */}
       <mesh position={[0, -0.55, 0]}>
         <boxGeometry args={[0.8, 0.08, 0.55]} />
-        <meshStandardMaterial color="#3a3a4a" roughness={0.6} metalness={0.4} />
+        <meshStandardMaterial color="#004aad" roughness={0.4} metalness={0.6} />
       </mesh>
-      {/* BASE TOP GREEN SURFACE */}
+      {/* BASE TOP SILVER SURFACE */}
       <mesh position={[0, -0.508, 0]}>
         <boxGeometry args={[0.72, 0.004, 0.48]} />
-        <meshStandardMaterial color="#4caf50" roughness={0.9} />
+        <meshStandardMaterial color="#c0c0c0" roughness={0.3} metalness={0.7} />
       </mesh>
-      {/* LED ILLUMINATOR */}
+      {/* LED ILLUMINATOR with Black Cap */}
       <mesh position={[0, -0.51, 0.1]}>
-        <cylinderGeometry args={[0.04, 0.045, 0.025, 32]} />
+        <cylinderGeometry args={[0.09, 0.1, 0.03, 32]} />
         <meshStandardMaterial {...silver} />
       </mesh>
-      <mesh position={[0, -0.496, 0.1]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.003, 32]} />
-        <meshStandardMaterial color="#ffffff" emissive="#ffffaa" emissiveIntensity={5} />
+      {/* Black Cap Ring */}
+      <mesh position={[0, -0.495, 0.1]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.012, 32]} />
+        <meshStandardMaterial {...black} />
       </mesh>
-      <pointLight color="#fff8e1" intensity={0.6} distance={0.5} position={[0, -0.47, 0.1]} />
+      {/* Light Surface */}
+      <mesh position={[0, -0.49, 0.1]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.003, 32]} />
+        <meshStandardMaterial color="#ffffff" emissive="#ffffaa" emissiveIntensity={lightValue * 12} />
+      </mesh>
+      <spotLight 
+        position={[0, -0.47, 0.1]} 
+        angle={0.22} 
+        penumbra={0.9} 
+        intensity={lightValue * 8} 
+        distance={2} 
+        target-position={[0, 0.5, 0.1]} 
+      />
+      <pointLight color="#fff8e1" intensity={lightValue * 1.2} distance={0.5} position={[0, -0.47, 0.1]} />
 
-      {/* COLUMN (arm, right side) */}
-      <mesh position={[0.22, 0.0, -0.14]}>
-        <boxGeometry args={[0.1, 1.1, 0.1]} />
+      {/* ANGLED ARM STRUCTURE (Solid structural fix) */}
+      {/* Vertical lower support */}
+      <mesh position={[0.26, -0.15, -0.05]}>
+        <boxGeometry args={[0.09, 0.8, 0.09]} />
         <meshStandardMaterial {...silver} />
       </mesh>
-      {/* TOP HORIZONTAL BAR */}
-      <mesh position={[0.02, 0.52, -0.14]}>
-        <boxGeometry args={[0.42, 0.08, 0.1]} />
+      {/* Angled Upper Neck - Sweeping UP to the tube for a solid joint */}
+      <mesh position={[0.13, 0.32, -0.05]} rotation={[0, 0, -0.45]}>
+        <boxGeometry args={[0.34, 0.11, 0.1]} />
         <meshStandardMaterial {...silver} />
       </mesh>
 
-      {/* COARSE FOCUS KNOB (left) */}
-      <mesh position={[0.175, 0.0, -0.14]} rotation={[0, 0, Math.PI/2]}>
-        <cylinderGeometry args={[0.07, 0.07, 0.025, 32]} />
+      {/* COARSE FOCUS KNOB */}
+      <mesh position={[0.215, -0.1, -0.05]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.025, 32]} />
         <meshStandardMaterial {...silver} roughness={0.2} />
       </mesh>
-      {/* COARSE FOCUS KNOB (right) */}
-      <mesh position={[0.265, 0.0, -0.14]} rotation={[0, 0, Math.PI/2]}>
-        <cylinderGeometry args={[0.07, 0.07, 0.025, 32]} />
+      <mesh position={[0.305, -0.1, -0.05]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.025, 32]} />
         <meshStandardMaterial {...silver} roughness={0.2} />
       </mesh>
-      {/* FINE FOCUS KNOB (left) */}
-      <mesh position={[0.175, -0.09, -0.14]} rotation={[0, 0, Math.PI/2]}>
-        <cylinderGeometry args={[0.045, 0.045, 0.022, 32]} />
+      {/* FINE FOCUS KNOB */}
+      <mesh position={[0.215, -0.18, -0.05]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.02, 32]} />
         <meshStandardMaterial {...darkGray} />
       </mesh>
-      {/* FINE FOCUS KNOB (right) */}
-      <mesh position={[0.265, -0.09, -0.14]} rotation={[0, 0, Math.PI/2]}>
-        <cylinderGeometry args={[0.045, 0.045, 0.022, 32]} />
+      <mesh position={[0.305, -0.18, -0.05]} rotation={[0, 0, Math.PI/2]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.02, 32]} />
         <meshStandardMaterial {...darkGray} />
       </mesh>
 
       {/* ---------- MOVING STAGE GROUP ---------- */}
-      <group position={[0, (focusValue - 0.5) * 0.05, 0]}>
+      <group position={[0, (focusValue - 0.5) * 0.2, 0]}>
         {/* STAGE */}
         <mesh position={[0, -0.26, 0.05]}>
           <boxGeometry args={[0.62, 0.018, 0.5]} />
-          <meshStandardMaterial color="#222" roughness={0.5} metalness={0.5} />
+          <meshStandardMaterial color="#1e3a8a" roughness={0.5} metalness={0.5} />
         </mesh>
         {/* STAGE CLIPS */}
         {[-0.12, 0.12].map((x, i) => (
@@ -191,57 +204,62 @@ function MicroscopeModel({ zoomLevel, focusValue = 0.5 }) {
           <cylinderGeometry args={[0.04, 0.05, 0.1, 32]} />
           <meshStandardMaterial {...darkGray} />
         </mesh>
+        
+        {/* SUB-STAGE DIAPHRAGM KNOB (Rotates with light control) */}
+        <mesh position={[0, -0.37, 0.0]} rotation={[0, lightValue * Math.PI * 2, 0]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.04, 32]} />
+          <meshStandardMaterial {...black} />
+          {/* Knob grip marks */}
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            <mesh key={i} position={[Math.sin(i * Math.PI/4) * 0.08, 0, Math.cos(i * Math.PI/4) * 0.08]}>
+              <boxGeometry args={[0.01, 0.03, 0.01]} />
+              <meshStandardMaterial {...darkGray} />
+            </mesh>
+          ))}
+        </mesh>
       </group>
 
-      {/* BODY TUBE */}
-      <mesh position={[-0.08, 0.25, -0.05]}>
-        <cylinderGeometry args={[0.04, 0.045, 0.44, 32]} />
+      {/* BODY TUBE (Black) */}
+      <mesh position={[0, 0.15, -0.05]}>
+        <cylinderGeometry args={[0.045, 0.05, 0.35, 32]} />
         <meshStandardMaterial {...black} />
       </mesh>
 
-      {/* HEAD (binocular mount base) */}
-      <mesh position={[-0.08, 0.49, -0.05]}>
-        <boxGeometry args={[0.16, 0.05, 0.10]} />
-        <meshStandardMaterial {...black} />
-      </mesh>
-      {/* Angled prism box */}
-      <mesh position={[-0.08, 0.52, -0.02]} rotation={[0.4, 0, 0]}>
-        <boxGeometry args={[0.14, 0.06, 0.08]} />
-        <meshStandardMaterial {...black} />
-      </mesh>
+      {/* MONOCULAR ANGLED HEAD (Exact Image Match) */}
+      <group position={[0, 0.31, -0.05]} rotation={[0.5, 0, 0]}>
+        {/* Prism housing */}
+        <mesh position={[0, 0.03, 0]}>
+          <boxGeometry args={[0.12, 0.1, 0.12]} />
+          <meshStandardMaterial {...black} />
+        </mesh>
+        {/* Eyepiece tube */}
+        <mesh position={[0, 0.12, 0]}>
+          <cylinderGeometry args={[0.025, 0.028, 0.18, 32]} />
+          <meshStandardMaterial {...black} />
+        </mesh>
+        {/* Eye cup */}
+        <mesh position={[0, 0.22, 0]}>
+          <cylinderGeometry args={[0.035, 0.025, 0.03, 32]} />
+          <meshStandardMaterial color="#0a0a0a" />
+        </mesh>
+        {/* Crystal lens */}
+        <mesh position={[0, 0.236, 0]}>
+          <cylinderGeometry args={[0.022, 0.022, 0.005, 32]} />
+          <meshStandardMaterial color="#b3e5fc" transparent opacity={0.6} />
+        </mesh>
+      </group>
 
-      {/* EYEPIECE TUBES (angled) - Left & Right */}
-      {[-0.045, 0.045].map((xOffset, i) => (
-        <group key={i} position={[-0.08 + xOffset, 0.54, 0]} rotation={[0.4, 0, 0]}>
-          {/* Main tube */}
-          <mesh position={[0, 0.06, 0]}>
-            <cylinderGeometry args={[0.022, 0.026, 0.12, 32]} />
-            <meshStandardMaterial {...black} />
-          </mesh>
-          {/* Focus adjustment ring on the tube */}
-          <mesh position={[0, 0.02, 0]}>
-            <cylinderGeometry args={[0.028, 0.028, 0.02, 32]} />
-            <meshStandardMaterial {...silver} roughness={0.3} />
-          </mesh>
-          {/* Eyepiece eye cup */}
-          <mesh position={[0, 0.12, 0]}>
-            <cylinderGeometry args={[0.033, 0.022, 0.016, 32]} />
-            <meshStandardMaterial color="#0a0a0a" roughness={0.9} />
-          </mesh>
-          {/* Eyepiece crystal */}
-          <mesh position={[0, 0.128, 0]}>
-            <cylinderGeometry args={[0.022, 0.022, 0.003, 32]} />
-            <meshStandardMaterial color="#b3e5fc" transparent opacity={0.7} roughness={0} />
-          </mesh>
-        </group>
-      ))}
-
-      {/* ROTATING NOSEPIECE GROUP */}
-      <group ref={nosepieceRef} position={[-0.08, 0.03, -0.05]}>
-        {/* Nosepiece disc */}
-        <mesh>
-          <cylinderGeometry args={[0.075, 0.085, 0.04, 32]} />
+      {/* REVOLVING NOSEPIECE (Tapered conical match) */}
+      <group ref={nosepieceRef} position={[0, -0.02, -0.05]}>
+        {/* Conical connector */}
+        <mesh position={[0, 0.04, 0]}>
+          <cylinderGeometry args={[0.06, 0.09, 0.08, 32]} />
           <meshStandardMaterial {...silver} />
+        </mesh>
+        {/* Main tapered disc */}
+        <mesh>
+          <cylinderGeometry args={[0.09, 0.07, 0.06, 32, 1, false]} />
+          <meshStandardMaterial {...silver} roughness={0.2} metalness={0.9} />
         </mesh>
         {/* 4 Objective lenses */}
         {lensObjs.map((obj) => {
@@ -274,16 +292,19 @@ function MicroscopeModel({ zoomLevel, focusValue = 0.5 }) {
   );
 }
 
-function MicroscopeViewer({ zoomLevel, focusValue }) {
+function MicroscopeViewer({ zoomLevel, focusValue, lightValue }) {
   return (
-    <div style={{ width: '100%', height: '280px', borderRadius: '12px', overflow: 'hidden',
-      border: '1px solid rgba(255,255,255,0.08)', background: 'radial-gradient(circle at 40% 40%, #1a1a2e, #080810)' }}>
-      <Canvas camera={{ position: [0.0, 0.0, 2.8], fov: 45 }} shadows>
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[2, 3, 2]} intensity={1.2} castShadow />
-        <directionalLight position={[-1, 1, -1]} intensity={0.3} color="#4488ff" />
+    <div style={{ width: '420px', height: '370px', borderRadius: '12px', overflow: 'hidden', margin: '0 auto',
+      border: '1px solid rgba(255,255,255,0.12)', 
+      background: 'radial-gradient(circle at center, #475569, #0f172a)' }}>
+      <Canvas camera={{ position: [0.0, 0.0, 1.95], fov: 42 }} shadows>
+        <ambientLight intensity={0.6} />
+        <directionalLight position={[2, 3, 2]} intensity={1.5} castShadow />
+        <directionalLight position={[-1, 1, -1]} intensity={0.4} color="#4488ff" />
         <pointLight position={[0, 1.5, 0]} intensity={0.5} color="#ffffff" />
-        <MicroscopeModel zoomLevel={zoomLevel} focusValue={focusValue} />
+        <group position={[0, -0.05, 0]}>
+          <MicroscopeModel zoomLevel={zoomLevel} focusValue={focusValue} lightValue={lightValue} />
+        </group>
         <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
       </Canvas>
     </div>
@@ -292,10 +313,10 @@ function MicroscopeViewer({ zoomLevel, focusValue }) {
 
 const LensRevolver = ({ currentZoom, onSwitch, isRotating }) => {
   const lenses = [
-    { zoom: 4,   color: '#ef5350', label: '4Ã—'   },
-    { zoom: 10,  color: '#ffa726', label: '10Ã—'  },
-    { zoom: 40,  color: '#42a5f5', label: '40Ã—'  },
-    { zoom: 100, color: '#ab47bc', label: '100Ã—' },
+    { zoom: 4,   color: '#ef5350', label: '4x'   },
+    { zoom: 10,  color: '#ffa726', label: '10x'  },
+    { zoom: 40,  color: '#42a5f5', label: '40x'  },
+    { zoom: 100, color: '#ab47bc', label: '100x' },
   ];
   const currentIdx = ZOOM_ORDER.indexOf(currentZoom);
   const angle = currentIdx * -90;
@@ -569,18 +590,17 @@ const MicroscopeUI = () => {
           onMouseOver={e => e.currentTarget.style.borderColor = '#00e5ff'}
           onMouseOut={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
         >
-          â† BACK TO LAB
+          ← BACK TO LAB
         </button>
 
-        {/* â”€â”€ 3D Microscope Simulation View â”€â”€ */}
+        {/* ── 3D Microscope Simulation View ── */}
         <div style={{ width: '90%', marginBottom: '16px' }}>
-          <MicroscopeViewer zoomLevel={zoomLevel} focusValue={effectiveFocus} />
+          <MicroscopeViewer zoomLevel={zoomLevel} focusValue={effectiveFocus} lightValue={light} />
         </div>
 
 
 
-        {/* â”€â”€ CONTROLS PANEL â”€â”€ */}
-        {/* â”€â”€ CONTROLS PANEL â”€â”€ */}
+        {/* ———————————————————————————————————————————————————————————————————————————————————————————————— */}
         <div style={{
           background: 'rgba(255,255,255,0.04)', borderRadius: '18px',
           border: '1px solid rgba(255,255,255,0.08)', padding: '18px 20px',
@@ -604,7 +624,7 @@ const MicroscopeUI = () => {
 
         {/* Zoom Label */}
         <div style={{ marginTop: '14px', padding: '6px 16px', background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)', borderRadius: '20px', fontSize: '10px', color: '#00e5ff', fontWeight: 900, letterSpacing: '3px', textAlign: 'center' }}>
-          {zoomData.multiplier} â€” {zoomData.desc}
+          {zoomData.multiplier} - {zoomData.desc}
         </div>
 
         {/* Phase info card */}
@@ -617,7 +637,7 @@ const MicroscopeUI = () => {
             </div>
           ) : (
             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '11px', fontWeight: 700, letterSpacing: '2px' }}>
-              {!rootOnSlide ? 'ðŸ”­ Place specimen on stage' : zoomLevel < 40 ? 'ðŸ”¬ Switch to 40Ã— or 100Ã— to analyse cells' : 'Click a cell to identify phase'}
+              {!rootOnSlide ? '🔍 Place specimen on stage' : zoomLevel < 40 ? '🔬 Switch to 40x or 100x to analyse cells' : 'Click a cell to identify phase'}
             </div>
           )}
         </div>
@@ -630,9 +650,9 @@ const MicroscopeUI = () => {
         background: 'radial-gradient(ellipse at center, #0d0d1a 0%, #060608 100%)',
       }}>
         {/* Eyepiece label */}
-        <div style={{ marginBottom: '16px', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '4px', fontWeight: 700 }}>EYEPIECE VIEW â€” {zoomData.multiplier} OBJECTIVE</div>
+        <div style={{ marginBottom: '16px', fontSize: '10px', color: 'rgba(255,255,255,0.35)', letterSpacing: '4px', fontWeight: 700 }}>EYEPIECE VIEW - {zoomData.multiplier} OBJECTIVE</div>
 
-        {/* â”€â”€ Circular Lens Viewport â”€â”€ */}
+        {/* ── Circular Lens Viewport ── */}
         <div style={{
           position: 'relative', width: '440px', height: '440px',
           animation: isRotating ? 'lensRotatePulse 0.52s ease' : 'none',
@@ -668,7 +688,10 @@ const MicroscopeUI = () => {
                 position: 'absolute', inset: 0, zIndex: 1,
                 backgroundImage: `url('${imgSrc}')`,
                 backgroundSize: 'cover', backgroundPosition: 'center',
-                filter: `blur(${blurPx}px) contrast(1.15) saturate(${stained ? 1.6 : 1.1}) brightness(${rootOnSlide ? 1.0 : 0.55})`,
+                filter: `blur(${blurPx}px) 
+                        contrast(${0.6 + light * 1.2}) 
+                        saturate(${stained ? 1.4 + light * 0.4 : 0.8 + light * 0.4}) 
+                        brightness(${rootOnSlide ? light * 1.5 : light * 0.4})`,
                 transform: `scale(${
                   zoomLevel === 4   ? 1.05 :
                   zoomLevel === 10  ? 1.25 :
@@ -745,7 +768,7 @@ const MicroscopeUI = () => {
         <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.4 }}>
           <div style={{ width: '60px', height: '2px', background: '#fff' }} />
           <span style={{ fontSize: '9px', letterSpacing: '2px' }}>
-            {{ 4: '500Âµm', 10: '200Âµm', 40: '50Âµm', 100: '10Âµm' }[zoomLevel]}
+            {{ 4: '500µm', 10: '200µm', 40: '50µm', 100: '10µm' }[zoomLevel]}
           </span>
         </div>
       </div>

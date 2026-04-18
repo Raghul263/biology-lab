@@ -147,6 +147,8 @@ const LabRoom = () => {
         <mesh 
           position={[0, 0.85, 0]} 
           castShadow receiveShadow
+          onPointerOver={() => { if (heldTool) document.body.style.cursor = 'pointer'; }}
+          onPointerOut={() => { document.body.style.cursor = 'auto'; }}
           onPointerDown={(e) => {
             if (heldTool) {
               e.stopPropagation();
@@ -168,6 +170,13 @@ const LabRoom = () => {
                     const point = e.point;
                     const safeX = Math.max(-2.1, Math.min(2.1, point.x));
                     const safeZ = Math.max(-0.8, Math.min(0.8, point.z));
+                    
+                    // Reset placement target so it's "on table"
+                    store.setStates({ 
+                       onionPlacedOn: null, 
+                       onionInBeaker: false, 
+                       onionBottomInWater: false 
+                    });
                     
                     // Save the new table position so it doesn't jump back
                     setSetupPosition('onion', [safeX, 0.93, safeZ]);

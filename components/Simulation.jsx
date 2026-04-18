@@ -90,8 +90,7 @@ function DropTarget() {
           store.setSetupPosition(id, [safeX, 0.93, safeZ]);
           store.setPlaced(id, true);
         } else {
-          // Warning for imprecise placement
-          store.showWrongAction("Please place the equipment securely on the table surface.");
+          // No response for wrong placement (strict constraints)
         }
       }
     };

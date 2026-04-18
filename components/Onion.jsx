@@ -102,7 +102,7 @@ const FreshShoot = ({ index, count }) => {
 /* ── MAIN ONION (PHYSICS/FREE FLOW) ───────────────────────────────── */
 const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
   const {
-    heldTool, setHeldTool, onionPlacedOn, onionRootsState, setStates, setupPositions, showWrongAction, rootsRemovedFromOnion
+    heldTool, setHeldTool, onionPlacedOn, onionRootsState, setStates, setupPositions, rootsRemovedFromOnion
   } = useStore();
 
   const isHeld = heldTool === 'onion';
@@ -133,19 +133,9 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
         intersection.x = Math.max(-2.0, Math.min(2.0, intersection.x));
         intersection.z = Math.max(-0.8, Math.min(0.8, intersection.z));
         
-        // 🧲 MAGNETIC HOVER PREVIEW:
-        const beakerPos = setupPositions['waterBeaker'] || [-1.2, 0.93, -0.3];
-        const distToBeaker = Math.hypot(intersection.x - beakerPos[0], intersection.z - beakerPos[2]);
-        
-        if (distToBeaker < 0.25) { // Strict snap zone for alignment preview
-          // STEP 1: Show alignment preview (hover state) high above the beaker
-          targetPos.current.set(beakerPos[0], beakerPos[1] + 0.35, beakerPos[2]);
-          targetRot.current.set(0, 0, 0);
-        } else {
-          // Free movement
-          targetPos.current.set(intersection.x, 1.08, intersection.z); // Slightly higher for floating look
-          targetRot.current.set(0, 0, 0); 
-        }
+        // Free movement
+        targetPos.current.set(intersection.x, 0.93, intersection.z); 
+        targetRot.current.set(0, 0, 0);
       }
     } else {
       const tilePos = setupPositions['tile'] || [0, 0.93, 0.3];
@@ -155,15 +145,16 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
       if (onionPlacedOn === 'tile') {
         targetPos.current.set(tilePos[0], tilePos[1] + 0.05, tilePos[2]);
         targetRot.current.set(0, 0, Math.PI / 2); // Straight "0 to 0" horizontal angle
+      } else if (onionPlacedOn === 'beakerTop') {
+        targetPos.current.set(beakerPos[0], beakerPos[1] + 0.35, beakerPos[2]);
+        targetRot.current.set(0, 0, 0); 
       } else if (onionPlacedOn === 'waterBeaker') {
-        // MATCH PREVIEW HEIGHT
         targetPos.current.set(beakerPos[0], beakerPos[1] + 0.08, beakerPos[2]);
-        targetRot.current.set(0, 0, 0); // Balance with toothpicks on beaker
+        targetRot.current.set(0, 0, 0); 
       } else if (onionPlacedOn === 'watchGlass') {
         targetPos.current.set(wgPos[0], wgPos[1] + 0.05, wgPos[2]);
-        targetRot.current.set(0, 0, Math.PI / 2); // Straight "0 to 0" horizontal angle
+        targetRot.current.set(0, 0, Math.PI / 2); 
       } else {
-         // Resting somewhere else unattached (on the table)
          const savedPos = setupPositions['onion'] || position;
          targetPos.current.set(savedPos[0], savedPos[1], savedPos[2]);
          targetRot.current.set(0, 0, 0);
@@ -172,24 +163,21 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
 
     if (meshRef.current) {
       if (onionPlacedOn) {
-        if (onionPlacedOn === 'waterBeaker') {
-           // STEP 2: Smooth vertical drop animation into beaker
-           meshRef.current.position.lerp(targetPos.current, 0.03); // slow vertical drop
-           meshRef.current.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetRot.current), 0.1);
-           
-           // WATER CONTACT CONDITION: check if bottom reached water surface
-           const distToTarget = meshRef.current.position.distanceTo(targetPos.current);
-           if (distToTarget < 0.015) {
-               meshRef.current.position.copy(targetPos.current); // fix in place once reached
-               if (!useStore.getState().onionBottomInWater) {
-                   setStates({ onionInBeaker: true, onionBottomInWater: true });
-               }
-           }
-        } else {
-           // HARD LOCK: Direct positioning and rotation when fixed to tile or watch glass
-           meshRef.current.position.copy(targetPos.current);
-           meshRef.current.quaternion.setFromEuler(targetRot.current);
-        }
+         if (onionPlacedOn === 'waterBeaker') {
+             meshRef.current.position.lerp(targetPos.current, 0.015); 
+             meshRef.current.quaternion.slerp(new THREE.Quaternion().setFromEuler(targetRot.current), 0.1);
+             const distToTarget = meshRef.current.position.distanceTo(targetPos.current);
+             if (distToTarget < 0.008) {
+                 meshRef.current.position.copy(targetPos.current);
+                 if (!useStore.getState().onionBottomInWater) {
+                     setStates({ onionInBeaker: true, onionBottomInWater: true });
+                 }
+             }
+         } else {
+             // HARD LOCK: Direct positioning and rotation when fixed to tile, watch glass, or beakerTop
+             meshRef.current.position.copy(targetPos.current);
+             meshRef.current.quaternion.setFromEuler(targetRot.current);
+         }
       } else {
         // SMOOTH LERP: Only use smooth motion while dragging or resting on table
         meshRef.current.position.lerp(targetPos.current, 0.2);
@@ -212,6 +200,7 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
        // Smooth continuous growth over 6.5 seconds
        if (growthTimer > 6.5) {
            if (!currentRootGrowthCompleted) {
+               // Transition from CUT_DRY or DRY to GROWN
                setStates({ onionRootsState: 'GROWN', rootGrowthCompleted: true });
            }
        } else {
@@ -249,10 +238,8 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
                isCutting: false, 
                cutStartTime: 0 
              });
-             showWrongAction('Root tips collected in watch glass.');
           } else if (onionPlacedOn === 'tile') {
              setStates({ onionRootsState: 'CUT_DRY', isCutting: false, cutStartTime: 0 });
-             showWrongAction('Dry roots cut on tile.');
           } else {
              // 🪵 CUT ON TABLE (FREE FLOW)
              if (onionRootsState === 'GROWN') {
@@ -262,7 +249,6 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
                     isCutting: false, 
                     cutStartTime: 0 
                 });
-                showWrongAction('Roots cut on table.');
              } else {
                 setStates({ isCutting: false, cutStartTime: 0 });
              }
@@ -299,13 +285,10 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
     // Strict snap zones for internal onion handler
     if (distToTile < 0.3) {
       setStates({ onionPlacedOn: 'tile' });
-      useStore.getState().showWrongAction("Onion fixed to Cutting Tile");
     } else if (distToBeaker < 0.25) {
-      setStates({ onionPlacedOn: 'waterBeaker' });
-      useStore.getState().showWrongAction("Onion placed in Water Beaker");
+      setStates({ onionPlacedOn: 'beakerTop' });
     } else if (distToWG < 0.25) {
       setStates({ onionPlacedOn: 'watchGlass' });
-      useStore.getState().showWrongAction("Onion placed on Watch Glass");
     } else {
       // Direct Table Drop
       setStates({ onionPlacedOn: null });
@@ -325,18 +308,15 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
 
     // IF NOT HELD: 
     if (!heldTool) {
-      // 🛡️ ACCIDENTAL PICKUP PROTECTION:
-      // Only pick up if clicking the bulb specifically, and not just the outer interaction zone
-      const localPoint = meshRef.current.worldToLocal(e.point.clone());
-      const distFromCenter = localPoint.length();
-      
-      // Threshold ensures you must click the onion itself. 
-      // When placed, we make it much stricter (0.1) to avoid accidental pickups when clicking nearby table.
-      const pickupThreshold = onionPlacedOn ? 0.12 : 0.22;
-      if (distFromCenter > pickupThreshold) return; 
+      // Accidental pickup protection is naturally handled by the explicit interaction boxGeometries we created.
       
       // If was fixed, pop it out
       if (onionPlacedOn) {
+        if (onionPlacedOn === 'beakerTop') {
+            setStates({ onionPlacedOn: 'waterBeaker' });
+            return;
+        }
+
         setStates({ 
             onionPlacedOn: null, 
             onionInBeaker: false, 
@@ -345,6 +325,8 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
       }
       
       setHeldTool('onion');
+      // Instant vertical orientation on pickup
+      targetRot.current.set(0, 0, 0);
     } else {
       
       // OTHERWISE: Tool Action on roots
@@ -399,12 +381,54 @@ const Onion = ({ position = [-0.35, 0.93, -0.2] }) => {
             position={[0, onionPlacedOn ? 0.12 : 0.08, 0]}
             onPointerDown={handlePointerDown}
             onContextMenu={handleContextMenu}
+            onPointerOver={() => { 
+                if (!heldTool) document.body.style.cursor = 'pointer';
+                setStates({ hoveredComponent: 'onion' });
+            }}
+            onPointerOut={() => { 
+                document.body.style.cursor = 'auto'; 
+                setStates({ hoveredComponent: null });
+            }}
           >
             <boxGeometry args={[
-                onionPlacedOn ? 0.06 : 0.1, 
-                onionPlacedOn ? 0.08 : 0.16, 
-                onionPlacedOn ? 0.06 : 0.1
+                onionPlacedOn ? 0.12 : 0.16, 
+                onionPlacedOn ? 0.15 : 0.25, 
+                onionPlacedOn ? 0.12 : 0.16
             ]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+
+          {/* 🌿 SHOOT (TOP) INTERACTION ZONE: Makes the green part clickable */}
+          <mesh 
+            position={[0, 0.3, 0]}
+            onPointerDown={handlePointerDown}
+            onPointerOver={() => { 
+                if (!heldTool) document.body.style.cursor = 'pointer';
+                setStates({ hoveredComponent: 'onion' });
+            }}
+            onPointerOut={() => { 
+                document.body.style.cursor = 'auto'; 
+                setStates({ hoveredComponent: null });
+            }}
+          >
+            <boxGeometry args={[0.1, 0.15, 0.1]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+
+          {/* ✂️ ROOT CUTTING ZONE: Positioned at the base of the bulb where roots emerge */}
+          <mesh 
+            position={[0, -0.05, 0]}
+            onPointerDown={handlePointerDown}
+            onPointerOver={() => { 
+                if (heldTool === 'scalpel') document.body.style.cursor = 'crosshair';
+                setStates({ hoveredComponent: 'onion_roots' });
+            }}
+            onPointerOut={() => { 
+                document.body.style.cursor = 'auto'; 
+                setStates({ hoveredComponent: null });
+            }}
+          >
+            <boxGeometry args={[0.25, 0.25, 0.25]} />
             <meshBasicMaterial transparent opacity={0} depthWrite={false} />
           </mesh>
         </group>
