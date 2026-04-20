@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
@@ -30,12 +30,21 @@ import Needle from './Needle';
 import FixativeVial from './FixativeVial';
 import FilterPaper from './FilterPaper';
 
+// Opening / Tour
+import LandingScreen from './LandingScreen';
+import GuidedTour from './GuidedTour';
+
+// ─── App Modes ───────────────────────────────────────────────────────────────
+// 'landing'  → Opening screen with two buttons
+// 'tour'     → Guided tour overlay over the lab
+// 'workout'  → Free lab (current behavior)
+// 'practice' → Practice with hints
+
+// ─── Error Boundary ──────────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false }; }
-  static getDerivedStateFromError(error) { return { hasError: true }; }
-  componentDidCatch(error, errorInfo) {
-    console.error("3D Scene Error:", error, errorInfo);
-  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { console.error('3D Scene Error:', error, errorInfo); }
   render() {
     if (this.state.hasError) return (
       <div style={{ padding: '40px', color: '#ff9800', textAlign: 'center', background: '#050a0f', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -47,14 +56,12 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ─── Drop Target (drag-and-drop onto table) ──────────────────────────────────
 function DropTarget() {
   const { camera, gl } = useThree();
 
   useEffect(() => {
-    const handleDragOver = (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    };
+    const handleDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
 
     const handleDrop = (e) => {
       e.preventDefault();
@@ -68,25 +75,17 @@ function DropTarget() {
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
 
-      // Height of the table top is exactly 0.93
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.93);
       const intersect = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersect);
 
       if (intersect) {
-        // TABLE DIMENSIONS: 4.4 x 1.8 (X: -2.2 to 2.2, Z: -0.9 to 0.9)
-        // Strict limits to prevent any overhanging:
-        const tableLimitX = 1.8; 
-        const tableLimitZ = 0.5; 
-        
+        const tableLimitX = 1.8;
+        const tableLimitZ = 0.5;
         const store = useStore.getState();
-
-        // Check if the drop is within the strict safe zone
         if (Math.abs(intersect.x) <= 2.1 && Math.abs(intersect.z) <= 0.8) {
-          // Snap to the innermost safe position
           const safeX = Math.max(-tableLimitX, Math.min(tableLimitX, intersect.x));
           const safeZ = Math.max(-tableLimitZ, Math.min(tableLimitZ, intersect.z));
-          
           store.setSetupPosition(id, [safeX, 0.93, safeZ]);
           store.setPlaced(id, true);
         } else {
@@ -106,18 +105,17 @@ function DropTarget() {
   return null;
 }
 
+// ─── 3-D Scene ───────────────────────────────────────────────────────────────
 function Scene() {
   const { microscopeZoomed, heldTool, placedComponents, setupPositions, slideOnMicroscope } = useStore();
-
   const getPos = (id, fallback) => setupPositions[id] || fallback;
 
-  // All components render once placed (they stay visible throughout the experiment)
   return (
     <>
       <ambientLight intensity={0.7} />
-      <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow />
+      <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow shadow-mapSize={[512, 512]} />
       <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
-      <Environment preset="city" intensity={0.6} />
+      <Environment preset="city" intensity={0.6} resolution={256} />
 
       {!microscopeZoomed && (
         <PerspectiveCamera makeDefault position={[0, 3.0, 4.5]} fov={38} rotation={[-Math.PI / 6, 0, 0]} />
@@ -125,10 +123,7 @@ function Scene() {
 
       <Suspense fallback={
         <group position={[0, 1.2, 0]}>
-          <mesh>
-            <sphereGeometry args={[0.05, 16, 16]} />
-            <meshStandardMaterial color="#ff9800" emissive="#ff9800" emissiveIntensity={2} />
-          </mesh>
+          <mesh><sphereGeometry args={[0.05, 16, 16]} /><meshStandardMaterial color="#ff9800" emissive="#ff9800" emissiveIntensity={2} /></mesh>
           <pointLight color="#ff9800" intensity={2} distance={2} />
         </group>
       }>
@@ -136,25 +131,22 @@ function Scene() {
           <LabRoom />
           <DropTarget />
 
-          {/* Three Beakers */}
-          {placedComponents.waterBeaker && <Beaker position={getPos('waterBeaker', [-1.2, 0.93, -0.3])} />}
-          {placedComponents.hclBeaker && <HCLBeaker position={getPos('hclBeaker', [-1.5, 0.93, -0.3])} />}
-          {placedComponents.stainBeaker && <StainBeaker position={getPos('stainBeaker', [-1.5, 0.93, 0.1])} />}
-
-          {/* Core Lab Items */}
-          {placedComponents.onion && <Onion position={getPos('onion', [-0.5, 0.93, 0])} />}
-          {placedComponents.tile && <Tile position={getPos('tile', [0, 0.93, 0.3])} />}
-          {placedComponents.scalpel && <Scalpel position={getPos('scalpel', [0.4, 0.93, 0.5])} />}
-          {placedComponents.forceps && <Forceps position={getPos('forceps', [0.6, 0.93, 0])} />}
-          {placedComponents.needle && <Needle position={getPos('needle', [0.8, 0.93, 0.4])} />}
-          {placedComponents.watchGlass && <WatchGlass position={getPos('watchGlass', [1.0, 0.93, -0.1])} />}
-          {placedComponents.vial && <FixativeVial position={getPos('vial', [-0.8, 0.93, 0.4])} />}
-          {placedComponents.dropper && <Dropper position={getPos('dropper', [-1.3, 0.93, 0.5])} />}
-          {placedComponents.burner && <Burner position={getPos('burner', [1.4, 0.93, 0.3])} />}
+          {placedComponents.waterBeaker  && <Beaker       position={getPos('waterBeaker',  [-1.2, 0.93, -0.3])} />}
+          {placedComponents.hclBeaker    && <HCLBeaker    position={getPos('hclBeaker',    [-1.5, 0.93, -0.3])} />}
+          {placedComponents.stainBeaker  && <StainBeaker  position={getPos('stainBeaker',  [-1.5, 0.93,  0.1])} />}
+          {placedComponents.onion        && <Onion        position={getPos('onion',        [-0.5, 0.93,  0  ])} />}
+          {placedComponents.tile         && <Tile         position={getPos('tile',         [ 0,   0.93,  0.3])} />}
+          {placedComponents.scalpel      && <Scalpel      position={getPos('scalpel',      [ 0.4, 0.93,  0.5])} />}
+          {placedComponents.forceps      && <Forceps      position={getPos('forceps',      [ 0.6, 0.93,  0  ])} />}
+          {placedComponents.needle       && <Needle       position={getPos('needle',       [ 0.8, 0.93,  0.4])} />}
+          {placedComponents.watchGlass   && <WatchGlass   position={getPos('watchGlass',   [ 1.0, 0.93, -0.1])} />}
+          {placedComponents.vial         && <FixativeVial position={getPos('vial',         [-0.8, 0.93,  0.4])} />}
+          {placedComponents.dropper      && <Dropper      position={getPos('dropper',      [-1.3, 0.93,  0.5])} />}
+          {placedComponents.burner       && <Burner       position={getPos('burner',       [ 1.4, 0.93,  0.3])} />}
           {placedComponents.slide && !slideOnMicroscope && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
-          {placedComponents.coverSlip && <CoverSlip position={getPos('coverSlip', [0.5, 0.93, 0.6])} />}
-          {placedComponents.filterPaper && <FilterPaper position={getPos('filterPaper', [-0.6, 0.93, 0.6])} />}
-          {placedComponents.microscope && <Microscope position={getPos('microscope', [0, 1.0, -0.7])} />}
+          {placedComponents.coverSlip    && <CoverSlip    position={getPos('coverSlip',    [ 0.5, 0.93,  0.6])} />}
+          {placedComponents.filterPaper  && <FilterPaper  position={getPos('filterPaper',  [-0.6, 0.93,  0.6])} />}
+          {placedComponents.microscope   && <Microscope   position={getPos('microscope',   [ 0,   1.0,  -0.7])} />}
         </group>
       </Suspense>
 
@@ -175,15 +167,14 @@ function Scene() {
   );
 }
 
-export default function Simulation() {
+// ─── Lab View (shared between tour + workout + practice) ──────────────────────
+function LabView({ mode, onExitTour, onBackToLanding, onChangeMode }) {
   const { microscopeZoomed, setHeldTool } = useStore();
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setHeldTool(null);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const handler = (e) => { if (e.key === 'Escape') setHeldTool(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [setHeldTool]);
 
   return (
@@ -193,7 +184,7 @@ export default function Simulation() {
     }}>
       {/* Top bar */}
       <div style={{
-        height: '46px', minHeight: '46px', background: 'rgba(5, 15, 25, 0.96)',
+        height: '46px', minHeight: '46px', background: 'rgba(5,15,25,0.96)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '20px',
         zIndex: 100, justifyContent: 'space-between',
@@ -210,37 +201,112 @@ export default function Simulation() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{
-            padding: '4px 12px', background: 'rgba(255,109,0,0.15)',
-            border: '1px solid rgba(255,109,0,0.4)', borderRadius: '20px',
-            fontSize: '11px', color: '#ff9800', fontWeight: 600,
-          }}>
-            🟢 SIMULATION ACTIVE
-          </div>
+          <button
+            onClick={onBackToLanding}
+            style={{
+              padding: '5px 14px', background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.2)', borderRadius: '20px',
+              fontSize: '11px', color: 'white', fontWeight: 700,
+              cursor: 'pointer', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', gap: '6px'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+            }}
+          >
+            ← BACK TO MENU
+          </button>
+          
+          {mode === 'tour' && (
+            <div style={{
+              padding: '4px 12px', background: 'rgba(74,222,128,0.12)',
+              border: '1px solid rgba(74,222,128,0.35)', borderRadius: '20px',
+              fontSize: '11px', color: '#4ade80', fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block' }} />
+              GUIDED TOUR
+            </div>
+          )}
+          {mode === 'workout' && (
+            <div style={{
+              padding: '4px 12px', background: 'rgba(255,109,0,0.15)',
+              border: '1px solid rgba(255,109,0,0.4)', borderRadius: '20px',
+              fontSize: '11px', color: '#ff9800', fontWeight: 600,
+            }}>
+              🟢 SIMULATION ACTIVE
+            </div>
+          )}
+          {mode === 'practice' && (
+            <div style={{
+              padding: '4px 12px', background: 'rgba(59,130,246,0.15)',
+              border: '1px solid rgba(59,130,246,0.4)', borderRadius: '20px',
+              fontSize: '11px', color: '#60a5fa', fontWeight: 600,
+            }}>
+              📘 PRACTICE MODE
+            </div>
+          )}
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
-            {new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
+            {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
           </div>
         </div>
       </div>
 
-      {/* Main content area */}
+      {/* Main content */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
         <LeftPanel />
 
-        <div 
-          style={{ flex: 1, position: 'relative', minWidth: 0 }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
+        <div style={{ flex: 1, position: 'relative', minWidth: 0 }} onContextMenu={(e) => e.preventDefault()}>
           <ErrorBoundary>
-            <Canvas shadows>
+            {/* Added dpr limiter and performance prop to optimize rendering load. Fixed deprecated shadow type. */}
+            <Canvas shadows={{ type: THREE.PCFShadowMap }} dpr={[1, 1.5]} performance={{ min: 0.5 }}>
               <Scene />
             </Canvas>
           </ErrorBoundary>
 
           <HUD />
           {microscopeZoomed && <MicroscopeUI />}
+
+          {/* Guided Tour overlay rendered on top of the lab canvas */}
+          {mode === 'tour' && (
+            <GuidedTour
+              onClose={onExitTour}
+              onWorkout={() => onChangeMode('workout')}
+              onPractice={() => onChangeMode('practice')}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Root Simulation ─────────────────────────────────────────────────────────
+export default function Simulation() {
+  // 'landing' | 'tour' | 'workout' | 'practice'
+  const [mode, setMode] = useState('landing');
+
+  if (mode === 'landing') {
+    return (
+      <LandingScreen
+        onTour={() => setMode('tour')}
+        onPractice={() => setMode('practice')}
+        onWorkout={() => setMode('workout')}
+      />
+    );
+  }
+
+  return (
+    <LabView
+      mode={mode}
+      onExitTour={() => setMode('landing')}
+      onBackToLanding={() => setMode('landing')}
+      onChangeMode={setMode}
+    />
   );
 }
