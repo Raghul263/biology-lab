@@ -88,7 +88,7 @@ const ZOOM_ORDER = [4, 10, 40, 100];
 const LENS_COLORS = { 4: '#ef5350', 10: '#ffa726', 40: '#42a5f5', 100: '#ab47bc' };
 const NOSEPIECE_ANGLES = { 4: 0, 10: Math.PI * 0.5, 40: Math.PI, 100: Math.PI * 1.5 };
 
-function MicroscopeModel({ zoomLevel, focusValue = 0.5, lightValue = 0.75 }) {
+function MicroscopeModel({ zoomLevel, focusValue = 0.5, lightValue = 0.75, onSwitch }) {
   const nosepieceRef = useRef();
   const targetAngle = useRef(0);
   const mat = { roughness: 0.3, metalness: 0.8 };
@@ -268,7 +268,22 @@ function MicroscopeModel({ zoomLevel, focusValue = 0.5, lightValue = 0.75 }) {
           const cx = Math.sin(obj.angle) * 0.055;
           const cz = Math.cos(obj.angle) * 0.055;
           return (
-            <group key={obj.zoom} position={[cx, 0, cz]}>
+            <group 
+              key={obj.zoom} 
+              position={[cx, 0, cz]}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (onSwitch) onSwitch(obj.zoom);
+              }}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'pointer';
+              }}
+              onPointerOut={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'auto';
+              }}
+            >
               <mesh position={[0, -(obj.len/2 + 0.02), 0]}>
                 <cylinderGeometry args={[0.016, 0.013, obj.len, 16]} />
                 <meshStandardMaterial color={isActive ? color : '#999'} roughness={0.3} metalness={0.8}
@@ -292,7 +307,7 @@ function MicroscopeModel({ zoomLevel, focusValue = 0.5, lightValue = 0.75 }) {
   );
 }
 
-function MicroscopeViewer({ zoomLevel, focusValue, lightValue }) {
+function MicroscopeViewer({ zoomLevel, focusValue, lightValue, onSwitch }) {
   return (
     <div style={{ width: '420px', height: '370px', borderRadius: '12px', overflow: 'hidden', margin: '0 auto',
       border: '1px solid rgba(255,255,255,0.12)', 
@@ -303,7 +318,7 @@ function MicroscopeViewer({ zoomLevel, focusValue, lightValue }) {
         <directionalLight position={[-1, 1, -1]} intensity={0.4} color="#4488ff" />
         <pointLight position={[0, 1.5, 0]} intensity={0.5} color="#ffffff" />
         <group position={[0, -0.05, 0]}>
-          <MicroscopeModel zoomLevel={zoomLevel} focusValue={focusValue} lightValue={lightValue} />
+          <MicroscopeModel zoomLevel={zoomLevel} focusValue={focusValue} lightValue={lightValue} onSwitch={onSwitch} />
         </group>
         <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
       </Canvas>
@@ -595,7 +610,7 @@ const MicroscopeUI = () => {
 
         {/* ── 3D Microscope Simulation View ── */}
         <div style={{ width: '90%', marginBottom: '16px' }}>
-          <MicroscopeViewer zoomLevel={zoomLevel} focusValue={effectiveFocus} lightValue={light} />
+          <MicroscopeViewer zoomLevel={zoomLevel} focusValue={effectiveFocus} lightValue={light} onSwitch={handleZoomSwitch} />
         </div>
 
 
@@ -689,9 +704,9 @@ const MicroscopeUI = () => {
                 backgroundImage: `url('${imgSrc}')`,
                 backgroundSize: 'cover', backgroundPosition: 'center',
                 filter: `blur(${blurPx}px) 
-                        contrast(${0.6 + light * 1.2}) 
-                        saturate(${stained ? 1.4 + light * 0.4 : 0.8 + light * 0.4}) 
-                        brightness(${rootOnSlide ? light * 1.5 : light * 0.4})`,
+                        contrast(${0.7 + light * 1.8}) 
+                        saturate(${stained ? 1.2 + light * 0.6 : 0.7 + light * 0.6}) 
+                        brightness(${rootOnSlide ? light * 1.8 : light * 0.3})`,
                 transform: `scale(${
                   zoomLevel === 4   ? 1.05 :
                   zoomLevel === 10  ? 1.25 :
@@ -699,7 +714,7 @@ const MicroscopeUI = () => {
                   /* 100x */          5.0
                 })`,
                 transition: 'transform 0.7s cubic-bezier(0.2,0.8,0.2,1), filter 0.4s ease',
-                mixBlendMode: 'multiply',
+                mixBlendMode: 'normal',
               }} />
             )}
 

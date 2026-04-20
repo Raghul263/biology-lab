@@ -83,14 +83,18 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
     }
   });
 
-  const handleZoom = (e) => {
+  const handleZoom = (e, specificZoom = null) => {
     e.stopPropagation();
     if (!slideOnMicroscope) {
         // Option to show feedback: "Place a slide first"
         return;
     }
     if (!heldTool || heldTool === 'microscope') {
-      useStore.getState().setStates({ microscopeActive: true });
+      const zoomToSet = specificZoom || zoomLevel || 4;
+      useStore.getState().setStates({ 
+        microscopeActive: true,
+        zoomLevel: zoomToSet
+      });
       toggleMicroscope(true);
     }
   };
@@ -246,7 +250,7 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
       </group>
 
       {/* ─── HIGH-FIDELITY OPTICAL ASSEMBLY (Clickable for Zoom) ─── */}
-      <group position={[0, 0.44, 0.05]} onPointerDown={handleZoom}
+      <group position={[0, 0.44, 0.05]} onPointerDown={(e) => handleZoom(e, 4)}
         onPointerOver={(e) => { e.stopPropagation(); if (slideOnMicroscope) document.body.style.cursor = 'pointer'; }}
         onPointerOut={() => (document.body.style.cursor = 'auto')}
       >
@@ -273,22 +277,26 @@ const VibrantModernMicroscope = ({ position: initialPosition = [0, 1.0, -0.7] })
           ].map((obj, i) => {
             const isActive = zoomLevel === obj.zoom;
             return (
-              <group key={i} rotation={[0, obj.angle, 0]}>
-                <mesh position={[0.055, -0.07, 0]} rotation={[0, 0, -Math.PI / 10]} castShadow>
-                  <cylinderGeometry args={[0.018, 0.014, 0.1, 16]} />
-                  <meshStandardMaterial color={isActive ? obj.color : "#aaa"} roughness={0.3} metalness={0.8} emissive={isActive ? obj.color : '#000'} emissiveIntensity={isActive ? 0.6 : 0} />
-                </mesh>
-                {/* Color Identifier Ring */}
-                <mesh position={[0.057, -0.065, 0]} rotation={[0, 0, -Math.PI / 10]}>
-                  <cylinderGeometry args={[0.02, 0.02, 0.008, 16]} />
-                  <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={isActive ? 2 : 0.3} />
-                </mesh>
-                {/* Optic Glass Tip */}
-                <mesh position={[0.059, -0.125, 0]} rotation={[0, 0, -Math.PI / 10]}>
-                  <cylinderGeometry args={[0.012, 0.012, 0.002, 16]} />
-                  <meshStandardMaterial {...glassMaterial} color="#ffffff" />
-                </mesh>
-              </group>
+                <group 
+                  key={i} 
+                  rotation={[0, obj.angle, 0]} 
+                  onPointerDown={(e) => handleZoom(e, obj.zoom)}
+                >
+                  <mesh position={[0.055, -0.07, 0]} rotation={[0, 0, -Math.PI / 10]} castShadow>
+                    <cylinderGeometry args={[0.018, 0.014, 0.1, 16]} />
+                    <meshStandardMaterial color={isActive ? obj.color : "#aaa"} roughness={0.3} metalness={0.8} emissive={isActive ? obj.color : '#000'} emissiveIntensity={isActive ? 0.6 : 0} />
+                  </mesh>
+                  {/* Color Identifier Ring */}
+                  <mesh position={[0.057, -0.065, 0]} rotation={[0, 0, -Math.PI / 10]}>
+                    <cylinderGeometry args={[0.02, 0.02, 0.008, 16]} />
+                    <meshStandardMaterial color={obj.color} emissive={obj.color} emissiveIntensity={isActive ? 2 : 0.3} />
+                  </mesh>
+                  {/* Optic Glass Tip */}
+                  <mesh position={[0.059, -0.125, 0]} rotation={[0, 0, -Math.PI / 10]}>
+                    <cylinderGeometry args={[0.012, 0.012, 0.002, 16]} />
+                    <meshStandardMaterial {...glassMaterial} color="#ffffff" />
+                  </mesh>
+                </group>
             );
           })}
         </group> {/* end nosepieceRef group */}
