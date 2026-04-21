@@ -52,10 +52,11 @@ const Scalpel = ({ position: initialPosition = [0, 0.93, 0.4] }) => {
         }
       }
     } else if (!isHeld && meshRef.current) {
-      const { setupPositions } = useStore.getState();
+      const { setupPositions, setupRotations } = useStore.getState();
       const pos = setupPositions['scalpel'] || initialPosition;
+      const rot = setupRotations['scalpel'] || [0, Math.PI / 4, 0];
       meshRef.current.position.set(pos[0], pos[1] + 0.005, pos[2]);
-      meshRef.current.rotation.set(0, Math.PI / 4, 0);
+      meshRef.current.rotation.set(rot[0], rot[1], rot[2]);
     }
   });
 

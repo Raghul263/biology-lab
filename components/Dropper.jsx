@@ -155,12 +155,11 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
   const liquidLevel = (dropCount / 3) * 0.08;
 
   const showHighlight = !isHeld && !heldTool;
-  const homePos = initialPosition;
+  const setupRotations = useStore(state => state.setupRotations);
+  const currentRotation = isHeld ? [0, 0, 0] : (setupRotations['dropper'] || [Math.PI / 2, 0, Math.PI]);
 
   return (
     <group>
-      <group position={homePos} onPointerDown={handleClick} />
-
       <group ref={meshRef} onPointerDown={handleClick}
         onPointerOver={() => { 
             if (!heldTool) document.body.style.cursor = 'pointer'; 
@@ -179,7 +178,7 @@ const Dropper = ({ position: initialPosition = [-1.3, 0.93, 0.5] }) => {
         )}
 
         <group 
-          rotation={isHeld ? [0, 0, 0] : [Math.PI / 2, 0, Math.PI]} 
+          rotation={currentRotation} 
           position={[0, isHeld ? -0.08 : 0.02, 0]}
         >
           {/* Bulb */}
