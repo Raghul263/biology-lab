@@ -134,7 +134,7 @@ const FilterPaper = ({ position: initialPosition = [1.2, 0.93, -0.1] }) => {
           <meshStandardMaterial color={trayColor} roughness={0.3} transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
         <group position={[0, 0.012, 0]}>
-          {[...Array(6)].map((_, i) => (
+          {[...Array((isHeld || paperOnSlide) ? 5 : 6)].map((_, i) => (
             <mesh key={i} position={[0, i * 0.001, 0]} rotation={[0, Math.random() * Math.PI, 0]}>
               <cylinderGeometry args={[0.088, 0.088, 0.001, 32]} />
               <meshStandardMaterial color="#ffffff" roughness={1.0} />

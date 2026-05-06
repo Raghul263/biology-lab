@@ -224,7 +224,16 @@ export default function LandingScreen({ onTour, onPractice, onWorkout }) {
             className="landing-btn"
             onMouseEnter={() => setHovered('tour')}
             onMouseLeave={() => setHovered(null)}
-            onClick={onTour}
+            onClick={() => {
+              // Unlock audio engine for session on first user interaction
+              if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+              }
+              const audio = new Audio();
+              audio.play().catch(() => {});
+              onTour();
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',

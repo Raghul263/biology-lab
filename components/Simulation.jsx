@@ -107,7 +107,7 @@ function DropTarget() {
 
 // ─── 3-D Scene ───────────────────────────────────────────────────────────────
 function Scene() {
-  const { microscopeZoomed, heldTool, placedComponents, setupPositions, slideOnMicroscope } = useStore();
+  const { microscopeActive, heldTool, placedComponents, setupPositions, slideOnMicroscope } = useStore();
   const getPos = (id, fallback) => setupPositions[id] || fallback;
 
   return (
@@ -117,7 +117,7 @@ function Scene() {
       <hemisphereLight skyColor="#ffffff" groundColor="#444444" intensity={0.5} />
       <Environment preset="city" intensity={0.6} resolution={256} />
 
-      {!microscopeZoomed && (
+      {!microscopeActive && (
         <PerspectiveCamera makeDefault position={[0, 3.0, 4.5]} fov={38} rotation={[-Math.PI / 6, 0, 0]} />
       )}
 
@@ -131,27 +131,27 @@ function Scene() {
           <LabRoom />
           <DropTarget />
 
-          {placedComponents.waterBeaker  && <Beaker       position={getPos('waterBeaker',  [-1.2, 0.93, -0.3])} />}
-          {placedComponents.hclBeaker    && <HCLBeaker    position={getPos('hclBeaker',    [-1.5, 0.93, -0.3])} />}
-          {placedComponents.stainBeaker  && <StainBeaker  position={getPos('stainBeaker',  [-1.5, 0.93,  0.1])} />}
-          {placedComponents.onion        && <Onion        position={getPos('onion',        [-0.5, 0.93,  0  ])} />}
-          {placedComponents.tile         && <Tile         position={getPos('tile',         [ 0,   0.93,  0.3])} />}
-          {placedComponents.scalpel      && <Scalpel      position={getPos('scalpel',      [ 0.4, 0.93,  0.5])} />}
-          {placedComponents.forceps      && <Forceps      position={getPos('forceps',      [ 0.6, 0.93,  0  ])} />}
-          {placedComponents.needle       && <Needle       position={getPos('needle',       [ 0.8, 0.93,  0.4])} />}
-          {placedComponents.watchGlass   && <WatchGlass   position={getPos('watchGlass',   [ 1.0, 0.93, -0.1])} />}
-          {placedComponents.vial         && <FixativeVial position={getPos('vial',         [-0.8, 0.93,  0.4])} />}
-          {placedComponents.dropper      && <Dropper      position={getPos('dropper',      [-1.3, 0.93,  0.5])} />}
-          {placedComponents.burner       && <Burner       position={getPos('burner',       [ 1.4, 0.93,  0.3])} />}
-          {placedComponents.slide && !slideOnMicroscope && <Slide position={getPos('slide', [0.2, 0.93, 0.5])} />}
-          {placedComponents.coverSlip    && <CoverSlip    position={getPos('coverSlip',    [ 0.5, 0.93,  0.6])} />}
-          {placedComponents.filterPaper  && <FilterPaper  position={getPos('filterPaper',  [-0.6, 0.93,  0.6])} />}
-          {placedComponents.microscope   && <Microscope   position={getPos('microscope',   [ 0,   1.0,  -0.7])} />}
+          {placedComponents.waterBeaker  && <Beaker       position={getPos('waterBeaker',  [-1.5, 0.93, -0.2])} />}
+          {placedComponents.hclBeaker    && <HCLBeaker    position={getPos('hclBeaker',    [-1.8, 0.93,  0.2])} />}
+          {placedComponents.stainBeaker  && <StainBeaker  position={getPos('stainBeaker',  [-1.8, 0.93,  0.6])} />}
+          {placedComponents.onion        && <Onion        position={getPos('onion',        [-0.5, 0.93, -0.2])} />}
+          {placedComponents.tile         && <Tile         position={getPos('tile',         [ 0.1, 0.93,  0.3])} />}
+          {placedComponents.scalpel      && <Scalpel      position={getPos('scalpel',      [ 0.8, 0.93,  0.4])} />}
+          {placedComponents.forceps      && <Forceps      position={getPos('forceps',      [ 1.0, 0.93,  0.1])} />}
+          {placedComponents.needle       && <Needle       position={getPos('needle',       [ 1.2, 0.93,  0.4])} />}
+          {placedComponents.watchGlass   && <WatchGlass   position={getPos('watchGlass',   [ 1.4, 0.93, -0.1])} />}
+          {placedComponents.vial         && <FixativeVial position={getPos('vial',         [-0.2, 0.93, -0.4])} />}
+          {placedComponents.dropper      && <Dropper      position={getPos('dropper',      [-1.4, 0.93,  0.6])} />}
+          {placedComponents.burner       && <Burner       position={getPos('burner',       [ 1.7, 0.93,  0.3])} />}
+          {placedComponents.slide && !slideOnMicroscope && <Slide position={getPos('slide', [0.5, 0.93, 0.7])} />}
+          {placedComponents.coverSlip    && <CoverSlip    position={getPos('coverSlip',    [ 0.8, 0.93,  0.8])} />}
+          {placedComponents.filterPaper  && <FilterPaper  position={getPos('filterPaper',  [-0.4, 0.93,  0.7])} />}
+          {placedComponents.microscope   && <Microscope   position={getPos('microscope',   [-0.8, 0.93,  0.2])} />}
         </group>
       </Suspense>
 
       <OrbitControls
-        enabled={!microscopeZoomed}
+        enabled={!microscopeActive}
         enableRotate={!heldTool && !useStore.getState().cameraLocked}
         makeDefault
         minPolarAngle={Math.PI / 4}
@@ -169,7 +169,7 @@ function Scene() {
 
 // ─── Lab View (shared between tour + workout + practice) ──────────────────────
 function LabView({ mode, onExitTour, onBackToLanding, onChangeMode }) {
-  const { microscopeZoomed, setHeldTool } = useStore();
+  const { microscopeActive, setHeldTool } = useStore();
 
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') setHeldTool(null); };
@@ -269,8 +269,8 @@ function LabView({ mode, onExitTour, onBackToLanding, onChangeMode }) {
             </Canvas>
           </ErrorBoundary>
 
-          <HUD />
-          {microscopeZoomed && <MicroscopeUI />}
+          {!microscopeActive && <HUD />}
+          {microscopeActive && <MicroscopeUI />}
 
           {/* Guided Tour overlay rendered on top of the lab canvas */}
           {mode === 'tour' && (
@@ -290,6 +290,14 @@ function LabView({ mode, onExitTour, onBackToLanding, onChangeMode }) {
 export default function Simulation() {
   // 'landing' | 'tour' | 'workout' | 'practice'
   const [mode, setMode] = useState('landing');
+
+  useEffect(() => {
+    if (mode === 'practice') {
+      useStore.getState().startPracticeMode();
+    } else if (mode === 'landing') {
+      useStore.getState().resetExperiment();
+    }
+  }, [mode]);
 
   if (mode === 'landing') {
     return (

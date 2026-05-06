@@ -3,74 +3,70 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Play, Pause, X, ChevronRight, ChevronLeft, Volume2, VolumeX, FlaskConical, Languages, Check, BookOpen } from 'lucide-react';
 import useStore from '../lib/store';
+import { useVoiceAssistant } from '../lib/useVoiceAssistant';
 
 // ─── Tour Content ────────────────────────────────────────────────────────────
 const TOUR_CONTENT = {
   en: {
     intro: "Welcome to the Virtual Biology Lab! Today we'll study Mitosis in Onion Root Tip using a slide-based preparation method.",
     drycut: "First, place the Onion Bulb on the cutting tile. Use the Scalpel to cut off the old, dry roots. This encourages fresh root growth.",
-    grow: "Transfer the onion to the Water Beaker. Let it sit for 3-4 days to grow fresh, active root tips.",
-    freshcut: "Transfer the onion to the Watch Glass. Use the scalpel to cleanly cut the fresh root tips.",
-    fixative: "Use Forceps to pick up the fresh root tips and place them directly into the Fixative Vial.",
-    slide: "Place the Glass Slide on the table. Use the forceps to safely transfer the root tip from the vial onto the slide.",
-    hcl: "Using the Dropper, add Hydrochloric Acid (HCl) directly onto the root on the slide to soften the tissue.",
-    stain: "Next, use the Dropper to add Acetocarmine Stain to highlight the chromosomes.",
-    burner: "Carefully move the slide to the Bunsen Burner to gently heat the root in the acid-stain mixture, then move it back.",
-    blot: "Place Filter Paper over the root to absorb the excess acid and stain.",
-    water: "Use the Dropper to add a single drop of clean water to the stained root.",
-    coverslip: "Place a Cover Slip over the root. Use the Needle to gently adjust and firmly squash the tissue.",
-    microscope: "Finally, place the prepared slide onto the Microscope stage to observe the stages of mitosis. Congratulations! 🎉",
+    grow: "Transfer the onion to the Water Beaker. Let it sit for 3-6 days to grow fresh, active root tips.",
+    freshcut: "Transfer the onion to the Watch Glass. Use the scalpel to cleanly cut the fresh root tips, ideally 5 to 10 millimeters long.",
+    fixative: "Use Forceps to pick up the fresh root tips and place them directly into the Fixative Vial for fixation.",
+    slide: "Place the Glass Slide on the table. Use the forceps to safely transfer the root tip from the vial onto the center of the slide.",
+    hcl: "Using the Dropper, add Hydrochloric Acid (HCl) to the root on the slide. This softens the cell walls for easier squashing.",
+    stain: "Next, add Acetocarmine Stain using the dropper. This will color the chromosomes, making them visible under the microscope.",
+    burner: "Briefly heat the slide over the Bunsen Burner. This helps the stain penetrate the tissue and fixes the cells.",
+    blot: "Carefully place Filter Paper over the root and blot gently to remove any excess acid or stain.",
+    water: "Add a single drop of clean water to the tissue using the dropper to maintain hydration.",
+    coverslip: "Place a Cover Slip over the root. Use a Needle to firmly squash the tissue into a single layer of cells.",
+    microscope: "Finally, place the prepared slide on the Microscope stage. We are now ready to observe the stages of mitosis.",
+    lens4x: "Switch to the 4x scanning lens. This magnification provides a broad view of the entire root tip structure.",
+    lens10x: "Rotate to the 10x low power lens. You can now clearly identify the meristematic zone where cells are dividing.",
+    lens40x: "Switch to the 40x high power lens. Individual cells and their nuclei are now visible. Look for cells in different mitotic stages.",
+    lens100x: "At 100x magnification, use the fine focus. You can now clearly see chromosomes in Prophase, Metaphase, Anaphase, and Telophase. 🎉",
     workoutNow: "WORKOUT NOW",
     practiceNow: "PRACTICE NOW",
   },
-  hi: {
-    intro: "वर्चुअल बायोलॉजी लैब में स्वागत है!",
-    drycut: "प्याज को कटिंग टाइल पर रखें। स्केलपेल से पुरानी जड़ों को काटें।",
-    grow: "प्याज को पानी के बीकर में रखें और ताजी शाखाएं उगाएं।",
-    freshcut: "प्याज को वॉच ग्लास पर रखें और ताजी जड़ों को स्केलपेल से काट लें।",
-    fixative: "जड़ों को फोर्सेप्स से उठाएं और फिक्सेटिव वायल में डालें।",
-    slide: "गास स्लाइड को टेबल पर रखें और जड़ को उस पर रखें।",
-    hcl: "ड्रॉपर से जड़ पर हाइड्रोक्लोरिक एसिड डालें।",
-    stain: "एसिटोकार्मिन दाग की बूंदें डालें।",
-    burner: "स्लाइड को बर्नर पर थोड़ा गर्म करें।",
-    blot: "फिल्टर पेपर से अतिरिक्त एसिड और दाग पोंछ लें।",
-    water: "ड्रॉपर से पानी की एक बूंद डालें।",
-    coverslip: "कवर स्लिप लगाएं और सुई से धीरे से दबाएं।",
-    microscope: "स्लाइड को माइक्रोस्कोप पर रखें और माइटोसिस देखें। 🎉",
-    workoutNow: "वर्कआउट शुरू करें",
-    practiceNow: "अभ्यास करें",
-  },
   mr: {
-    intro: "व्हर्च्युअल बायोलॉजी लॅबमध्ये स्वागत!",
-    drycut: "कांदा कटिंग टाइलवर ठेवा. जुनी मुळे स्केलपेलने कापून काढा.",
-    grow: "कांदा पाण्याच्या बीकरमध्ये ठेवा आणि ताजी मुळे वाढवा.",
-    freshcut: "कांदा वॉच ग्लासवर ठेवा आणि ताजी मुळे स्केलपेलने कापा.",
-    fixative: "मुळे फोर्सेप्सने उचलून फिक्सेटिव्ह व्हायलमध्ये टाका.",
-    slide: "ग्लास स्लाइडवर मूळ ठेवा.",
-    hcl: "ड्रॉपरने मुळावर हायड्रोक्लोरिक आम्ल (HCl) टाका.",
-    stain: "आता एसिटोकार्मिन डाग मुळावर टाका.",
-    burner: "स्लाइड बुन्सन बर्नरवर गरम करा.",
-    blot: "फिल्टर पेपरने जादा आम्ल आणि डाग पुसून काढा.",
-    water: "ड्रॉपरने पाण्याचा एक थेंब टाका.",
-    coverslip: "कव्हर स्लिप ठेवा आणि सुईने दाबा.",
-    microscope: "स्लाइड सूक्ष्मदर्शकावर ठेवा आणि माइटोसिस पहा. अभिनंदन! 🎉",
+    intro: "व्हर्च्युअल बायोलॉजी लॅबमध्ये आपले स्वागत आहे! आज आपण स्लाइड-आधारित तयारी पद्धती वापरून कांद्याच्या मुळाच्या टोकामध्ये समसूत्री विभाजनाचा (माइटोसिस) अभ्यास करणार आहोत।",
+    drycut: "प्रथम, कांदा कटिंग टाइलवर ठेवा. जुनी, वाळलेली मुळे कापण्यासाठी स्केलपेल वापरा. यामुळे मुळांच्या नवीन वाढीस चालना मिळते।",
+    grow: "कांदा पाण्याच्या बीकरमध्ये ठेवा. ताजी मुळे येण्यासाठी ३ ते ६ दिवस वाट पहा।",
+    freshcut: "कांदा वॉच ग्लासवर ठेवा. स्केलपेल वापरून ताजी मुळे ५ ते १० मिलीमीटर लांबीची कापून घ्या।",
+    fixative: "फोर्सेप्स वापरून मुळांची टोके उचलून फिक्सेटिव्ह व्हायलमध्ये टाका।",
+    slide: "ग्लास स्लाइड टेबलवर ठेवा. मुळाचे टोक वायल मधून काढून स्लाइडच्या मध्यभागी ठेवा।",
+    hcl: "ड्रॉपर वापरून, मुळावर हायड्रोक्लोरिक आम्ल (HCl) टाका. यामुळे पेशींच्या भिंती मऊ होतात।",
+    stain: "त्यानंतर, ड्रॉपरने एसिटोकार्मिन स्टेन टाका. यामुळे गुणसूत्र रंगीत होतात आणि सूक्ष्मदर्शकाखाली स्पष्ट दिसतात।",
+    burner: "स्लाइड बुन्सन बर्नरवर थोडा वेळ धरून गरम करा. यामुळे रंग पेशींच्या आत व्यवस्थित शिरतो।",
+    blot: "फिल्टर पेपर वापरून जादा आम्ल आणि रंग हळुवारपणे पुसून काढा।",
+    water: "मुळावर शुद्ध पाण्याचा एक थेंब टाका जेणेकरून ते कोरडे पडणार नाही।",
+    coverslip: "मुळावर कव्हर स्लिप ठेवा आणि सुईने दाबा जेणेकरून पेशींचा एक पातळ थर तयार होईल।",
+    microscope: "शेवटी, तयार स्लाइड सूक्ष्मदर्शकाच्या स्टेजवर ठेवा. आता आपण माइटोसिसच्या पायऱ्या पाहण्यासाठी तयार आहोत।",
+    lens4x: "4x स्कॅनिंग लेन्सवर स्विच करा. यामुळे मुळाच्या संरचनेचे विहंगम दृश्य दिसते।",
+    lens10x: "आता 10x लो पॉवर लेन्सवर जा. जेथे पेशींचे विभाजन होत आहे तो भाग स्पष्टपणे ओळखता येईल।",
+    lens40x: "40x हाय पॉवर लेन्सवर स्विच करा. येथे पेशी आणि त्यांचे केंद्रक स्पष्ट दिसतील।",
+    lens100x: "100x मॅग्निफिकेशनवर, गुणसूत्रांचे बारकाईने निरीक्षण करा. आपल्याला प्रोफेज ते टेलोफेज पर्यंतचे सर्व टप्पे स्पष्ट दिसतील। 🎉",
     workoutNow: "वर्कआउट करा",
     practiceNow: "सराव करा",
   },
   te: {
-    intro: "వర్చువల్ బయాలజీ ల్యాబ్కు స్వాగతం!",
-    drycut: "ఉల్లిపాయను కట్టింగ్ టైల్ పై ఉంచి, పాత వేర్లను కత్తిరించండి.",
-    grow: "బీకర్ లో ఉల్లిపాయను ఉంచి కొత్త వేర్లు పెంచండి.",
-    freshcut: "వాచ్ గ్లాస్ పై ఉల్లిపాయను ఉంచి, కొత్త వేర్లను కత్తిరించండి.",
-    fixative: "వేర్లను ఫిక్సేటివ్ వైల్ లో ఉంచండి.",
-    slide: "వేరు ముక్కను గాజు స్లయిడ్ పై ఉంచండి.",
-    hcl: "హైడ్రోక్లోరిక్ ఆమ్లం (HCl) డ్రాపర్ తో వేయండి.",
-    stain: "తరువాత అస్టోకార్మిన్ స్టెయిన్ వేయండి.",
-    burner: "స్లయిడ్ ను బర్నర్ పై కొద్దిగా వేడి చేయండి.",
-    blot: "ఫిల్టర్ పేపర్ తో అదనపు ఆమ్లం, స్టెయిన్ తుడిచేయండి.",
-    water: "నీటి చుక్కను వేయండి.",
-    coverslip: "కవర్ స్లిప్ ఉంచి, సూదితో నొక్కండి.",
-    microscope: "స్లయిడ్ ను మైక్రోస్కోప్ పై ఉంచి పరిశీలించండి. అభినందనలు! 🎉",
+    intro: "వర్చువల్ బయాలజీ ల్యాబ్‌కు స్వాగతం! ఈరోజు మనం స్లైడ్ ఆధారిత తయారీ పద్ధతిని ఉపయోగించి ఉల్లిపాయ వేరు చివరలో సమవిభజన (మైటోసిస్) గురించి అధ్యయనం చేస్తాము.",
+    drycut: "మొదట, ఉల్లిపాయను కట్టింగ్ టైల్ మీద ఉంచండి. పాత, ఎండిన వేర్లను కత్తిరించడానికి మాడ్పు (Scalpel) ఉపయోగించండి. ఇది కొత్త వేర్ల పెరుగుదలకు సహాయపడుతుంది.",
+    grow: "ఉల్లిపాయను నీటి బీకర్‌లోకి మార్చండి. కొత్త వేర్లు పెరగడానికి 3 నుండి 6 రోజుల వరకు అలాగే ఉంచండి.",
+    freshcut: "ఉల్లిపాయను వాచ్ గ్లాస్‌లోకి మార్చండి. కొత్త వేరు చివరలను 5 నుండి 10 మిల్లీమీటర్ల పొడవుతో కత్తిరించండి.",
+    fixative: "చిమ్టా (Forceps) ఉపయోగించి వేరు చివరలను తీసి ఫిక్సేటివ్ వైల్‌లో ఉంచండి.",
+    slide: "గాజు స్లైడ్ టేబుల్ మీద ఉంచండి. వేరు చివరను స్లైడ్ మధ్యలోకి జాగ్రత్తగా మార్చండి.",
+    hcl: "డ్రాపర్ ఉపయోగించి, స్లైడ్ మీద ఉన్న వేరుపై హైడ్రోక్లోరిక్ ఆమ్లం (HCl) వేయండి. ఇది కణ కవచాలను మెత్తబరుస్తుంది.",
+    stain: "తరువాత ఎసిటోకార్మిన్ స్టెయిన్ వేయండి. ఇది క్రోమోజోములకు రంగును అందిస్తుంది, తద్వారా మైక్రోస్కోప్ కింద అవి స్పష్టంగా కనిపిస్తాయి.",
+    burner: "స్లైడ్‌ను బన్సెన్ బర్నర్ మీద కొద్దిగా వేడి చేయండి. ఇది రంగు కణజాలంలోకి వెళ్లడానికి సహాయపడుతుంది.",
+    blot: "ఫిల్టర్ పేపర్ ఉపయోగించి అదనపు ఆమ్లం లేదా స్టెయిన్‌ను జాగ్రత్తగా తుడిచివేయండి.",
+    water: "వేరుపై ఒక చుక్క శుభ్రమైన నీటిని వేయండి.",
+    coverslip: "వేరుపై కవర్ స్లిప్ ఉంచండి. సూది ఉపయోగించి కణజాలాన్ని ఒకే పొరలా నొక్కండి (Squash).",
+    microscope: "చివరగా, సిద్ధం చేసిన స్లైడ్‌ను మైక్రోస్కోప్ స్టేజ్ మీద ఉంచండి. మనం ఇప్పుడు మైటోసిస్ దశలను పరిశీలిస్తాము.",
+    lens4x: "4x స్కానింగ్ లెన్స్‌కు మారండి. ఇది వేరు నిర్మాణం యొక్క ప్రాథమిక అవలోకనాన్ని ఇస్తుంది.",
+    lens10x: "10x లో పవర్ లెన్స్‌కు మారండి. కణాలు విభజన చెందుతున్న ప్రాంతాన్ని మీరు ఇప్పుడు స్పష్టంగా చూడవచ్చు.",
+    lens40x: "40x హై పవర్ లెన్స్‌కు మారండి. వ్యక్తిగత కణాలు మరియు వాటి కేంద్రకాలు ఇప్పుడు కనిపిస్తాయి.",
+    lens100x: "100x వద్ద క్రోమోజోములను వివరంగా పరిశీలించండి. మీరు ఇక్కడ ప్రొఫేజ్ నుండి టెలోఫేజ్ వరకు అన్ని దశలను స్పష్టంగా చూడవచ్చు. 🎉",
     workoutNow: "వర్కౌట్ చేయండి",
     practiceNow: "ప్రాక్టీస్ చేయండి",
   }
@@ -79,7 +75,7 @@ const TOUR_CONTENT = {
 const STEP_KEYS = [
   'intro', 'drycut', 'grow', 'freshcut', 'fixative',
   'slide', 'hcl', 'stain', 'burner', 'blot',
-  'water', 'coverslip', 'microscope'
+  'water', 'coverslip', 'microscope', 'lens4x', 'lens10x', 'lens40x', 'lens100x'
 ];
 
 const STEP_META = [
@@ -95,64 +91,56 @@ const STEP_META = [
   { title: 'Blot Excess',      icon: '📄', highlight: 'filterPaper' },
   { title: 'Add Water Drop',   icon: '💧', highlight: 'dropper' },
   { title: 'Squash Tissue',    icon: '👇', highlight: 'coverSlip' },
-  { title: 'Microscope View',  icon: '🔬', highlight: 'microscope' }
+  { title: 'Microscope View',  icon: '🔬', highlight: 'microscope' },
+  { title: '4X Magnification', icon: '🔍', highlight: null },
+  { title: '10X Medium Power', icon: '🔍', highlight: null },
+  { title: '40X High Power',   icon: '🔬', highlight: null },
+  { title: '100X Chromosomes', icon: '🧬', highlight: null }
 ];
 
 const DEFAULT_POSITIONS = {
-  waterBeaker: [-1.0, 0.93, -0.5],
-  hclBeaker: [-1.5, 0.93, -0.3],
-  stainBeaker: [-1.5, 0.93, 0.1],
-  onion: [0, 0.93, -0.4],
-  tile: [0, 0.93, 0.4],
-  scalpel: [1.1, 0.93, -0.4],
-  forceps: [-0.6, 0.93, 0.3],
-  needle: [1.1, 0.93, 0.4],
-  watchGlass: [1.4, 0.93, -0.3],
-  vial: [-0.6, 0.93, -0.3],
-  dropper: [-1.3, 0.93, 0.5],
-  burner: [1.8, 0.93, 0.2],
-  slide: [0.6, 0.93, 0.1],
-  coverSlip: [0.6, 0.93, 0.5],
-  filterPaper: [0.6, 0.93, -0.4],
-  microscope: [0, 1.0, -0.7]
+  waterBeaker: [-1.5, 0.93, -0.2],
+  hclBeaker: [-1.8, 0.93, 0.2],
+  stainBeaker: [-1.8, 0.93, 0.6],
+  onion: [-0.5, 0.93, -0.2],
+  tile: [0.1, 0.93, 0.3],
+  scalpel: [0.8, 0.93, 0.4],
+  forceps: [1.0, 0.93, 0.1],
+  needle: [1.2, 0.93, 0.4],
+  watchGlass: [1.4, 0.93, -0.1],
+  vial: [-0.2, 0.93, -0.4],
+  dropper: [-1.4, 0.93, 0.6],
+  burner: [1.7, 0.93, 0.3],
+  slide: [0.5, 0.93, 0.7],
+  coverSlip: [0.8, 0.93, 0.8],
+  filterPaper: [-0.4, 0.93, 0.7],
+  microscope: [-0.8, 0.93, 0.2]
 };
 
 const LANGUAGE_OPTIONS = [
   { id: 'en', name: 'English' },
-  { id: 'hi', name: 'Hindi (हिंदी)' },
-  { id: 'mr', name: 'Marathi (मराठी)' },
+  { id: 'mr', name: 'Marathi (मరాఠీ)' },
   { id: 'te', name: 'Telugu (తెలుగు)' },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function GuidedTour({ onClose, onWorkout, onPractice }) {
-  const [stepIndex, setStepIndex] = useState(0);
+  const { tourStepIndex: stepIndex, selectedLanguage: language, setTourStepIndex: setStepIndex, setSelectedLanguage: setLanguage, setPlaced } = useStore();
+  const { speak, stop, pause, resume: play, replay, unlockAudio, isSpeaking, hasFinishedNarration, setHasFinishedNarration, isReady } = useVoiceAssistant();
+
   const [isPaused, setIsPaused] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [language, setLanguage] = useState('en');
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [hasFinishedNarration, setHasFinishedNarration] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const langRef = useRef(null);
-  const currentSpeakIdRef = useRef(0);
   const isMountedRef = useRef(true);
-  const { setPlaced } = useStore();
-
-  // Load voices
-  useEffect(() => {
-    if (window.speechSynthesis) window.speechSynthesis.getVoices();
-    if (window.speechSynthesis?.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-    }
-  }, []);
 
   // Cleanup on unmount / close
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
     };
   }, []);
 
@@ -165,89 +153,18 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [isLangOpen]);
 
-  // ─── Speak ───
-  const utteranceRef = useRef(null);
-
-  const speak = useCallback((text) => {
-    if (!voiceEnabled) { setHasFinishedNarration(true); return; }
-    const speakId = ++currentSpeakIdRef.current;
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (!window.speechSynthesis) return;
-
-    let retries = 0;
-    const trySpeak = () => {
-      if (!isMountedRef.current || speakId !== currentSpeakIdRef.current) return;
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0 && retries < 5) { retries++; setTimeout(trySpeak, 200); return; }
-
-      const localeMap = { en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN', te: 'te-IN' };
-      const targetLang = localeMap[language] || 'en-US';
-
-      let langVoices = voices.filter(v => v.lang.replace('_', '-').startsWith(targetLang));
-      if (!langVoices.length) langVoices = voices.filter(v => v.lang.startsWith(targetLang.split('-')[0]));
-      if (!langVoices.length) langVoices = voices.filter(v => v.lang.startsWith(language));
-
-      let selectedVoice =
-        langVoices.find(v => v.name.toLowerCase().includes('google')) || langVoices[0];
-
-      if (!selectedVoice && language === 'mr') {
-        const hiVoices = voices.filter(v => v.lang.startsWith('hi'));
-        selectedVoice = hiVoices.find(v => v.name.toLowerCase().includes('google')) || hiVoices[0];
-      }
-      if (!selectedVoice && ['hi', 'mr', 'te'].includes(language)) {
-        const inVoices = voices.filter(v => v.lang.includes('-IN'));
-        selectedVoice = inVoices.find(v => v.name.toLowerCase().includes('google')) || inVoices[0];
-      }
-      
-      // Ultimate fallback to anything
-      if (!selectedVoice && voices.length > 0) {
-        selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      if (selectedVoice) { utterance.voice = selectedVoice; utterance.lang = selectedVoice.lang; }
-      else utterance.lang = targetLang;
-      utterance.rate = 0.92;
-      utterance.pitch = 1.0;
-
-      utteranceRef.current = utterance;
-
-      const safety = setTimeout(() => {
-        if (speakId !== currentSpeakIdRef.current) return;
-        setHasFinishedNarration(true);
-      }, 12000);
-
-      utterance.onend = () => {
-        if (speakId !== currentSpeakIdRef.current) return;
-        clearTimeout(safety);
-        setHasFinishedNarration(true);
-      };
-      
-      utterance.onerror = () => {
-        if (speakId !== currentSpeakIdRef.current) return;
-        clearTimeout(safety);
-        setHasFinishedNarration(true);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    };
-    if (isMountedRef.current) setTimeout(trySpeak, 50);
-  }, [voiceEnabled, language]);
-
   const handleTogglePlayPause = useCallback(() => {
     setIsPaused(p => {
       const isNowPaused = !p;
       if (isNowPaused) {
-        window.speechSynthesis?.cancel();
+        pause();
       } else {
-        setTimeout(() => {
-          const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
-          speak(text);
-        }, 50);
+        const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
+        replay(text, language, voiceEnabled);
       }
       return isNowPaused;
     });
-  }, [language, stepIndex, speak]);
+  }, [language, stepIndex, pause, replay, voiceEnabled]);
 
   // ─── Placement Animation (Initial fly in) ───
   const animatePlacement = useCallback((id, targetPos, versionToken) => {
@@ -331,12 +248,17 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
     });
   }, []);
 
-  // ─── Trigger narration on step change ───
+  // ─── Trigger narration on step or language change ───
   useEffect(() => {
-    setHasFinishedNarration(false);
-    setIsAnimating(true);
+    if (!isReady) return;
+    setIsPaused(false);
     const text = TOUR_CONTENT[language]?.[STEP_KEYS[stepIndex]] || TOUR_CONTENT.en[STEP_KEYS[stepIndex]];
-    speak(text);
+    speak(text, language, voiceEnabled);
+  }, [stepIndex, language, speak, voiceEnabled, isReady]);
+
+  // ─── Trigger 3D animation on step change ───
+  useEffect(() => {
+    setIsAnimating(true);
     
     // Track versions to abort previous overlapping tweens
     activeSequenceVersion.current += 1;
@@ -399,7 +321,12 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
     }
     if (stepIndex >= 12) { // microscope
       states.slideOnMicroscope = true;
+      states.microscopeActive = true;
     }
+    if (stepIndex === 13) { states.zoomLevel = 4; }
+    if (stepIndex === 14) { states.zoomLevel = 10; }
+    if (stepIndex === 15) { states.zoomLevel = 40; }
+    if (stepIndex === 16) { states.zoomLevel = 100; }
 
     // ─── Layout Reset ───
     const newPlaced = { ...store.placedComponents };
@@ -575,11 +502,22 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
          await tweenItem('slide', D.slide, 1800, vToken);
       }
       else if (stepIndex === 9) { // blot
+         // 🚀 PHASE 1: Move single sheet to slide
          await tweenItem('filterPaper', [D.slide[0], 0.95, D.slide[2]], 1500, vToken);
-         if (!check()) return; store.setStates({ paperOnSlide: true });
-         await wait(1500);
-         if (!check()) return; store.setStates({ paperOnSlide: false });
+         if (!check()) return; 
+         
+         // 🧼 PHASE 2: Start rubbing/cleaning animation (removes acid/stain visuals)
+         store.setStates({ paperOnSlide: true, isCleaning: true, cleaningProgress: 0 });
+         await wait(2400); 
+         if (!check()) return; 
+         store.setStates({ isCleaning: false, stainRemoved: true });
+         
+         // 📥 PHASE 3: Return sheet to the filter paper box
          await tweenItem('filterPaper', D.filterPaper, 1600, vToken);
+         if (!check()) return;
+         
+         // 📦 PHASE 4: Merge back into pile
+         store.setStates({ paperOnSlide: false });
       }
       else if (stepIndex === 10) { // water drop
          await tweenRotation('dropper', [0, 0, 0], 600, vToken);
@@ -604,20 +542,29 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
       }
       else if (stepIndex === 12) { // microscope
          await tweenItem('slide', [D.microscope[0], 1.2, D.microscope[2]], 2000, vToken);
-         if (!check()) return; store.setStates({ slideOnMicroscope: true });
+         if (!check()) return; store.setStates({ slideOnMicroscope: true, microscopeActive: true });
          await wait(800);
          await tweenItem('slide', [D.microscope[0], -5.0, D.microscope[2]], 10, vToken); 
+      }
+      else if (stepIndex >= 13) {
+         if (!check()) return; 
+         store.setStates({ slideOnMicroscope: true, microscopeActive: true });
       }
       if (check()) store.setStates(states);
     };
 
-    playCutscene();
-    const t = setTimeout(() => setIsAnimating(false), 400);
+    const runTour = async () => {
+      setIsAnimating(true);
+      await playCutscene();
+      if (isMountedRef.current) setIsAnimating(false);
+    };
+
+    runTour();
+    
     return () => {
        activeSequenceVersion.current += 1;
-       clearTimeout(t);
     };
-  }, [stepIndex, language, speak]);
+  }, [stepIndex]);
 
   // ─── Space bar ───
   useEffect(() => {
@@ -657,7 +604,7 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
           </div>
         </div>
         <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(74,222,128,0.2), transparent)', marginBottom: '14px' }} />
-        <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 400, color: 'rgba(255,255,255,0.88)', lineHeight: 1.7, letterSpacing: '0.2px', animation: isAnimating ? 'tourFadeUp 0.35s ease-out' : 'none' }}>{currentText}</p>
+        <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 400, color: 'rgba(255,255,255,0.88)', lineHeight: 1.7, letterSpacing: '0.2px', animation: isAnimating ? 'tourFadeUp 0.35s ease-out' : 'none' }} onClick={unlockAudio}>{currentText}</p>
         <div style={{ marginTop: '16px', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${((stepIndex + 1) / STEP_KEYS.length) * 100}%`, background: 'linear-gradient(90deg, #4ade80, #22d3ee)', borderRadius: '2px', transition: 'width 0.5s ease' }} />
         </div>
@@ -670,8 +617,8 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
             )}
             {isLast && (
               <>
-                <button className="tour-btn" onClick={() => { if (window.speechSynthesis) window.speechSynthesis.cancel(); onWorkout(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 22px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: 700, boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}><BookOpen size={14} /> {TOUR_CONTENT[language]?.workoutNow || 'WORKOUT NOW'}</button>
-                <button className="tour-btn" onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 22px', background: 'linear-gradient(135deg, #059669, #047857)', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: 700, boxShadow: '0 0 20px rgba(5,150,105,0.3)' }}><FlaskConical size={14} /> {TOUR_CONTENT[language]?.practiceNow || 'PRACTICE NOW'}</button>
+                <button className="tour-btn" onClick={() => { stop(); onWorkout(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 22px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: 700, boxShadow: '0 0 20px rgba(124,58,237,0.3)' }}><BookOpen size={14} /> {TOUR_CONTENT[language]?.workoutNow || 'WORKOUT NOW'}</button>
+                <button className="tour-btn" onClick={() => { stop(); onPractice(); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 22px', background: 'linear-gradient(135deg, #059669, #047857)', borderRadius: '12px', color: 'white', fontSize: '12px', fontWeight: 700, boxShadow: '0 0 20px rgba(5,150,105,0.3)' }}><FlaskConical size={14} /> {TOUR_CONTENT[language]?.practiceNow || 'PRACTICE NOW'}</button>
               </>
             )}
           </div>
@@ -692,18 +639,40 @@ export default function GuidedTour({ onClose, onWorkout, onPractice }) {
         </div>
         <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button className="tour-btn" disabled={isFirst} onClick={() => { if (!isFirst) { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i => i - 1); } }} style={{ padding: '5px', color: isFirst ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)', background: 'transparent' }}><ChevronLeft size={16} /></button>
+          <button className="tour-btn" disabled={isFirst} onClick={() => { if (!isFirst) { setIsPaused(false); setStepIndex(i => i - 1); } }} style={{ padding: '5px', color: isFirst ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)', background: 'transparent' }}><ChevronLeft size={16} /></button>
           <button className="tour-btn" onClick={handleTogglePlayPause} style={{ padding: '8px', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: '50%', color: '#4ade80', display: 'flex' }}>{isPaused ? <Play size={18} fill="currentColor" /> : <Pause size={18} fill="currentColor" />}</button>
-          <button className="tour-btn" disabled={isLast} onClick={() => { if (!isLast) { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i => i + 1); } }} style={{ padding: '5px', color: isLast ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)', background: 'transparent' }}><ChevronRight size={16} /></button>
+          <button className="tour-btn" disabled={isLast} onClick={() => { if (!isLast) { setIsPaused(false); setStepIndex(i => i + 1); } }} style={{ padding: '5px', color: isLast ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.55)', background: 'transparent' }}><ChevronRight size={16} /></button>
         </div>
         <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
-        <button className="tour-btn" onClick={() => setVoiceEnabled(v => !v)} style={{ padding: '5px', color: voiceEnabled ? '#4ade80' : 'rgba(255,255,255,0.25)', background: 'transparent' }}>{voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}</button>
-        <div style={{ display: 'flex', gap: '4px', padding: '0 4px' }}>
-          {STEP_KEYS.map((_, i) => (
-            <button key={i} onClick={() => { window.speechSynthesis?.cancel(); setIsPaused(false); setStepIndex(i); }} style={{ height: '6px', width: i === stepIndex ? '18px' : '6px', borderRadius: '3px', background: i === stepIndex ? '#4ade80' : i < stepIndex ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.15)', transition: 'all 0.35s ease', cursor: 'pointer', border: 'none', padding: 0 }} />
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="tour-btn" onClick={() => { unlockAudio(); setVoiceEnabled(v => !v); }} style={{ padding: '5px', color: !isReady ? 'rgba(255,255,255,0.1)' : voiceEnabled ? '#4ade80' : 'rgba(255,255,255,0.25)', background: 'transparent', position: 'relative' }}>
+            {voiceEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            {isSpeaking && (
+              <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '6px', height: '6px', background: '#4ade80', borderRadius: '50%', boxShadow: '0 0 8px #4ade80' }} />
+            )}
+            {!isReady && voiceEnabled && (
+              <span style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', fontSize: '6px', color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>LOAD...</span>
+            )}
+          </button>
+          <div style={{ display: 'flex', gap: '3px', padding: '0 4px', alignItems: 'center' }}>
+            {STEP_KEYS.map((_, i) => (
+              <button 
+                key={i} 
+                onClick={() => { setIsPaused(false); setStepIndex(i); }} 
+                style={{ 
+                  height: '4px', 
+                  width: i === stepIndex ? '12px' : '4px', 
+                  borderRadius: '2px', 
+                  background: i === stepIndex ? '#4ade80' : i < stepIndex ? 'rgba(74,222,128,0.4)' : 'rgba(255,255,255,0.15)', 
+                  transition: 'all 0.3s ease', 
+                  cursor: 'pointer', border: 'none', padding: 0,
+                  boxShadow: i === stepIndex ? '0 0 8px rgba(74,222,128,0.4)' : 'none'
+                }} 
+              />
+            ))}
+          </div>
         </div>
-        <button className="tour-btn" onClick={() => { if (window.speechSynthesis) window.speechSynthesis.cancel(); onClose(); }} style={{ padding: '5px', color: 'rgba(255,255,255,0.25)', background: 'transparent' }}><X size={15} /></button>
+        <button className="tour-btn" onClick={() => { stop(); onClose(); }} style={{ padding: '5px', color: 'rgba(255,255,255,0.25)', background: 'transparent' }}><X size={15} /></button>
       </div>
     </div>
   );

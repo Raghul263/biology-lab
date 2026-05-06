@@ -526,7 +526,19 @@ const MicroscopeUI = () => {
   const [coarse, setCoarse]       = useState(0.5);   // coarse focus knob
   const [light, setLight]         = useState(0.75);  // light intensity
   const [isRotating, setIsRotating] = useState(false);
-  const [prevZoom, setPrevZoom]   = useState(zoomLevel);
+  const [prevZoom, setPrevZoom]     = useState(zoomLevel);
+
+  // Sync with store zoomLevel changes (for Guided Tour transitions)
+  useEffect(() => {
+    if (zoomLevel !== prevZoom) {
+      setIsRotating(true);
+      const timer = setTimeout(() => {
+        setPrevZoom(zoomLevel);
+        setIsRotating(false);
+      }, 520);
+      return () => clearTimeout(timer);
+    }
+  }, [zoomLevel, prevZoom]);
 
   const zoomData = ZOOM_CONFIG[zoomLevel] || ZOOM_CONFIG[4];
   const stained  = !!slideStainApplied;
